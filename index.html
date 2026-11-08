@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<!-- =====================================================================
+  FILE: index.html
+  PURPOSE (beginner summary):
+    The single page that holds the whole FocusNest app. JavaScript (js/app.js)
+    swaps the content of the three columns when you click around, so the page
+    never reloads. The address bar "hash" (#/learn/...) remembers where you are.
+  LAYOUT:
+    1. <aside class="sidebar">  dark sage navigation (left column)
+    2. <section id="outline">   chapters + lessons of the open course (middle column)
+    3. <main id="workspace">    the selected page or lesson (right column)
+    4. Floating layers: Ask FocusNest tutor, focus mode, timer, modals, toasts.
+  DEPENDENCIES (all loaded below, pinned versions):
+    - Google Fonts: Inter + Fraunces (headings)
+    - lucide 0.469.0 (icons), JSZip 3.10.1 (reads .pptx), pdf.js 3.11.174 (reads .pdf)
+    - Our scripts in /js and the sample course in /data
+  SAFE TO EDIT: text inside the sidebar, colors in css/style.css, script order
+    only if you understand that later scripts use earlier ones.
+  ===================================================================== -->
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>FocusNest — Learn Your Way</title>
+  <meta name="description" content="Turn lecture slides into calm, bite-sized lessons, visuals, flashcards and quizzes.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%233f5a4c'/%3E%3Cpath d='M9 19c3-7 11-7 14 0' stroke='%23e7efe9' stroke-width='2.5' fill='none' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='20' r='2.6' fill='%23e7efe9'/%3E%3C/svg%3E">
+</head>
+<body>
+  <a class="skip-link" href="#workspace">Skip to lesson content</a>
+
+  <div class="app" id="app">
+    <!-- ============ LEFT COLUMN: NAVIGATION SIDEBAR ============ -->
+    <aside class="sidebar" id="sidebar" aria-label="Main navigation">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"><i data-lucide="feather"></i></span>
+        <div><strong>FocusNest</strong><small>Digital Analytics</small></div>
+      </div>
+      <!-- Each link changes the #hash; js/app.js route() draws the page. -->
+      <nav class="nav" id="nav">
+        <a href="#/dashboard" data-route="dashboard" title="Dashboard"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a>
+        <a href="#/chapters" data-route="chapters" title="Chapters"><i data-lucide="book-open"></i><span>Chapters</span></a>
+        <a href="#/slides" data-route="slides" title="Lecture Slides"><i data-lucide="presentation"></i><span>Lecture Slides</span></a>
+        <a href="#/notes" data-route="notes" title="My Notes"><i data-lucide="notebook-pen"></i><span>My Notes</span></a>
+        <a href="#/visual" data-route="visual" title="Visual Learning"><i data-lucide="network"></i><span>Visual Learning</span></a>
+        <a href="#/practice" data-route="practice" title="Practice & Quizzes"><i data-lucide="list-checks"></i><span>Practice &amp; Quizzes</span></a>
+        <a href="#/flashcards" data-route="flashcards" title="Flashcards"><i data-lucide="layers"></i><span>Flashcards</span></a>
+        <a href="#/planner" data-route="planner" title="Study Planner"><i data-lucide="calendar-clock"></i><span>Study Planner</span></a>
+        <a href="#/progress" data-route="progress" title="Progress Tracker"><i data-lucide="chart-no-axes-column"></i><span>Progress Tracker</span></a>
+        <a href="#/settings" data-route="settings" title="Settings"><i data-lucide="settings-2"></i><span>Settings</span></a>
+      </nav>
+      <div class="sidebar-foot">
+        <div class="xp-chip" id="xpChip" aria-live="polite"></div>
+        <!-- Collapse button: shrinks this sidebar to icons only (togglePanel in js/app.js). Choice is remembered. -->
+        <button class="nav-toggle" id="navToggle" aria-expanded="true" title="Collapse sidebar"><i data-lucide="panel-left-close"></i><span>Collapse sidebar</span></button>
+      </div>
+    </aside>
+
+    <!-- ============ MIDDLE COLUMN: COURSE OUTLINE ============ -->
+    <section class="outline" id="outline" aria-label="Chapter and its topics"></section>
+
+    <!-- ============ RIGHT COLUMN: WORKSPACE ============ -->
+    <main class="workspace" id="workspace" tabindex="-1">
+      <header class="topbar" id="topbar">
+        <!-- Mobile menu button: opens the sidebar on small screens (toggleSidebar in js/app.js). -->
+        <button class="icon-btn only-mobile" id="menuBtn" aria-label="Open navigation" aria-expanded="false"><i data-lucide="menu"></i></button>
+        <!-- Chapters button: brings back the chapter list when it is hidden (desktop) or opens it as a drawer (tablet/mobile). -->
+        <button class="icon-btn only-narrow" id="outlineBtn" aria-label="Show chapters"><i data-lucide="list-tree"></i></button>
+        <div class="topbar-title" id="topbarTitle"></div>
+        <div class="topbar-tools">
+          <!-- Pomodoro widget: drawn by js/focus.js renderTimerChip(). -->
+          <div id="timerChip"></div>
+          <!-- Parking lot: quick scratchpad (js/focus.js openParkingLot). -->
+          <button class="icon-btn" id="parkingBtn" aria-label="Distraction parking lot" title="Park a distracting thought"><i data-lucide="sticky-note"></i></button>
+          <!-- Tutor: opens Ask FocusNest (js/tutor.js). -->
+          <button class="btn btn-soft" id="tutorBtn" aria-expanded="false" aria-controls="tutor"><i data-lucide="sparkles"></i><span>Ask FocusNest</span></button>
+        </div>
+      </header>
+      <div class="read-progress" aria-hidden="true"><span id="readBar"></span></div>
+      <div class="view" id="view"></div>
+    </main>
+
+    <!-- ============ ASK FOCUSNEST TUTOR PANEL (collapsible) ============ -->
+    <aside class="tutor" id="tutor" aria-label="Ask FocusNest tutor" hidden></aside>
+  </div>
+
+  <!-- Focus mode overlay (js/focus.js). -->
+  <div class="focus-layer" id="focusLayer" role="dialog" aria-modal="true" aria-label="Focus mode" hidden></div>
+  <!-- Generic modal used by brain breaks, parking lot, confirmations -->
+  <div class="modal-back" id="modalBack" hidden><div class="modal" id="modal" role="dialog" aria-modal="true"></div></div>
+  <!-- Floating "Highlight" button that appears when you select lesson text -->
+  <button class="hl-pop" id="hlPop" hidden><i data-lucide="highlighter"></i> Highlight</button>
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+
+  <!-- ============ SCRIPTS (order matters) ============ -->
+  <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="js/schema.js"></script>
+  <script src="js/store.js"></script>
+  <!-- Sample course: extracted slides + lesson content written from them -->
+  <script src="data/slides.js"></script>
+  <script src="data/ch1.js"></script>
+  <script src="data/ch2a.js"></script>
+  <script src="data/ch2b.js"></script>
+  <script src="js/course.js"></script>
+  <script src="js/parser.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/visuals.js"></script>
+  <script src="js/quiz.js"></script>
+  <script src="js/flashcards.js"></script>
+  <script src="js/focus.js"></script>
+  <script src="js/tutor.js"></script>
+  <script src="js/lesson.js"></script>
+  <script src="js/pages.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

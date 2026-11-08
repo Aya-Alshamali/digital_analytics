@@ -1,0 +1,10 @@
+{
+  "name": "focusnest",
+  "version": "1.0.0",
+  "private": true,
+  "description": "FocusNest — ADHD-friendly learning for Digital and Social Media Analytics",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node tests/validate-seed.js && node tests/check.js"
+  }
+}
