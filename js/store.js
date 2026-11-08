@@ -32,7 +32,7 @@
     plan: null,                  // { days:[{date, topics:[ids]}] }
     parking: [],                 // [{ text, at }]
     timer: { focus: 15, brk: 5 },
-    settings: { fontSize: 17, lineHeight: 1.7, width: 72, contrast: "normal", bg: "paper", theme: "light", reduceMotion: false, ttsRate: 1, navCollapsed: false, outlineHidden: false }
+    settings: { fontSize: 17, lineHeight: 1.7, width: 72, contrast: "normal", bg: "paper", theme: "light", reduceMotion: false, ttsRate: 0.95, voice: null, voiceEngine: "natural", naturalVoice: "af_heart", naturalQuality: "auto", navCollapsed: false, outlineHidden: false }
   };
 
   var state = load();

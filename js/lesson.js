@@ -75,8 +75,8 @@
       '<button class="btn btn-soft' + (side === "mynotes" ? " on" : "") + '" data-l="mynotes" aria-pressed="' + (side === "mynotes") + '">' + FN.icon("pencil-line") + " My notes</button>" +
       // Bookmark → saves this lesson to My Notes
       '<button class="icon-btn' + (bm ? " on" : "") + '" data-l="bookmark" aria-pressed="' + bm + '" title="Bookmark this lesson">' + FN.icon("bookmark") + "</button>" +
-      // Read aloud → browser text-to-speech
-      '<button class="icon-btn" data-l="tts" title="Read this tab aloud">' + FN.icon("volume-2") + "</button></div></header>" +
+      // Read aloud → natural voice (Kokoro) or device voice; the chooser next to it switches voice.
+      '<button class="icon-btn" data-l="tts" title="Read this tab aloud">' + FN.icon("volume-2") + "</button>" + voiceChooser() + "</div></header>" +
       '<nav class="tabs" role="tablist" aria-label="Lesson tabs">' + TABS.map(function (x, k) {
         var seen = p.tabs[x[0]];
         return '<a role="tab" href="#/learn/' + esc(t.id) + "/" + x[0] + '" aria-selected="' + (x[0] === cur.tab) + '" class="' + (seen ? "seen" : "") + '">' + FN.icon(x[2]) + "<span>" + (k + 1) + ". " + x[1] + "</span></a>";
@@ -299,6 +299,40 @@
     });
   }
 
+  /**
+   * FUNCTION: voiceChooser()
+   * PURPOSE: small voice menu next to the 🔊 button, so students can switch voice
+   *   without opening Settings. Shows the natural voices, or the device voices when
+   *   "Device voice" is chosen in Settings.
+   */
+  function voiceChooser() {
+    var st = FN.store.get().settings, device = st.voiceEngine === "device" || !(FN.natural && FN.natural.supported());
+    var opts = device
+      ? FN.voices().slice(0, 8).map(function (v, i) { return [v.voiceURI, v.name.replace(/\s*\(English \((.+)\)\)/, " · $1"), (st.voice ? st.voice === v.voiceURI : i === 0)]; })
+      : FN.natural.VOICES.map(function (v) { return [v[0], v[1].split(" — ")[0] + " — " + v[1].split(" — ")[1].replace(" (best)", ""), (st.naturalVoice || "af_heart") === v[0]]; });
+    if (!opts.length) return "";
+    return '<label class="voice-quick" title="Reading voice"><span class="sr-only">Reading voice</span>' + FN.icon("audio-lines") +
+      '<select data-voice="' + (device ? "voice" : "naturalVoice") + '">' + opts.map(function (o) { return '<option value="' + esc(o[0]) + '"' + (o[2] ? " selected" : "") + ">" + esc(o[1]) + "</option>"; }).join("") + "</select></label>";
+  }
+
+  /**
+   * FUNCTION: readAloud(btn, el)
+   * PURPOSE: reads the lesson text inside `el` with a natural voice (see FN.speak in ui.js).
+   *   Pressing the same button again stops; the button shows a stop icon while reading.
+   */
+  var speakingBtn = null;
+  function readAloud(btn, el) {
+    if (!el) return;
+    if (speakingBtn === btn) { FN.stopSpeak(); return; }
+    var started = FN.speak(FN.readable(el), function () {
+      if (speakingBtn === btn) speakingBtn = null;
+      if (btn.isConnected) { btn.classList.remove("on"); btn.innerHTML = FN.icon("volume-2"); btn.title = "Read aloud"; FN.icons(); }
+    });
+    if (!started) return;
+    speakingBtn = btn;
+    btn.classList.add("on"); btn.innerHTML = FN.icon("square"); btn.title = "Stop reading"; FN.icons();
+  }
+
   /* ---------------- EVENT WIRING ---------------- */
   document.addEventListener("DOMContentLoaded", function () {
     var view = document.getElementById("view"), pop = document.getElementById("hlPop");
@@ -319,7 +353,7 @@
           });
           render();
         }
-        if (a === "tts") { var c = document.getElementById("lessonContent"); FN.speak(c.innerText.slice(0, 6000)); }
+        if (a === "tts") readAloud(l, document.getElementById("lessonContent"));
         return;
       }
       var m = e.target.closest("[data-mode]");
@@ -333,12 +367,20 @@
       }
       var fa = e.target.closest("[data-focus-at]"); if (fa) { FN.focus.open(cur.topic, +fa.dataset.focusAt); return; }
       var sp = e.target.closest("[data-speak]");
-      if (sp) { var sec = document.getElementById("sec-" + sp.dataset.speak); if (sec) FN.speak(sec.innerText); return; }
+      if (sp) { readAloud(sp, document.getElementById("sec-" + sp.dataset.speak)); return; }
       var un = e.target.closest("[data-unhl]");
       if (un) { FN.store.update(function (s) { s.highlights[cur.topic.id].splice(+un.dataset.unhl, 1); }); render(); }
     });
     // Reading progress bar + remember which note section you are reading (for resume).
     var rt;
+    // Voice chooser next to 🔊: save the choice; the next reading uses the new voice.
+    view.addEventListener("change", function (e) {
+      var s = e.target.closest("[data-voice]"); if (!s) return;
+      var key = s.dataset.voice, val = s.value;
+      FN.stopSpeak();
+      FN.store.update(function (st) { st.settings[key] = val; });
+      FN.toast("Voice changed — press 🔊 to listen.");
+    });
     view.addEventListener("scroll", function () {
       var max = view.scrollHeight - view.clientHeight;
       document.getElementById("readBar").style.width = (max > 0 ? (view.scrollTop / max) * 100 : 0) + "%";

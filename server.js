@@ -13,7 +13,11 @@ const http = require("http"), fs = require("fs"), path = require("path");
 const PORT = process.env.PORT || 8080, ROOT = __dirname;
 const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css", ".json": "application/json", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".svg": "image/svg+xml", ".md": "text/plain; charset=utf-8" };
 
-function send(res, code, body, type) { res.writeHead(code, { "Content-Type": type || "text/plain; charset=utf-8" }); res.end(body); }
+// The two "cross-origin isolation" headers let the browser use several CPU cores for the
+// natural voice (js/kokoro-worker.js), which makes it speak several times faster.
+// "credentialless" keeps fonts, icons and libraries from other sites loading normally.
+const ISOLATION = { "Cross-Origin-Opener-Policy": "same-origin", "Cross-Origin-Embedder-Policy": "credentialless" };
+function send(res, code, body, type) { res.writeHead(code, Object.assign({ "Content-Type": type || "text/plain; charset=utf-8" }, ISOLATION)); res.end(body); }
 
 http.createServer((req, res) => {
   let rel;

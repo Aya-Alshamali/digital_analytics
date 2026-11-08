@@ -15,7 +15,7 @@ const ctx = {
 };
 ctx.window = ctx; ctx.globalThis = ctx;
 vm.createContext(ctx);
-["js/schema.js", "data/slides.js", "js/parser.js", "js/quiz.js", "js/flashcards.js", "js/visuals.js"]
+["js/schema.js", "js/ui.js", "data/slides.js", "js/parser.js", "js/quiz.js", "js/flashcards.js", "js/visuals.js"]
   .forEach(f => vm.runInContext(fs.readFileSync(path.join(root, f), "utf8"), ctx, { filename: f }));
 const FN = ctx.FN;
 FN.shuffle = a => a.slice();
@@ -66,5 +66,13 @@ const defs = FN.parser.findDefinitions([{ text: "Data stream: is a flow of data 
 assert.strictEqual(defs[0].term, "Data stream");
 const ch2 = course.chapters[1].topics.find(t => t.steps.length >= 3);
 assert.ok(ch2, "slide 13's 'Step 1…Step 7' list should become a step-by-step lesson");
+
+// 5. Read aloud: symbols are spoken as words, slide references are dropped, long text is split into sentences
+const sp = FN.speechTest;
+assert.strictEqual(sp.cleanForSpeech("Organization → Account (slide 5)\nKey facts"), "Organization, then Account. Key facts.");
+assert.strictEqual(sp.cleanForSpeech("e.g. GA4 & GTM"), "for example, GA4 and GTM.");
+const parts = sp.sentences("First sentence. Second one! " + "word ".repeat(80));
+assert.ok(parts.length >= 3 && parts.every(x => x.length <= 221), "sentences are short");
+assert.ok(sp.voiceScore({ name: "Ava (Premium)", lang: "en-US", localService: true }) > sp.voiceScore({ name: "Samantha", lang: "en-US", localService: true }));
 
 console.log("check.js: all assertions passed (" + topics.length + " topics built from the real decks)");

@@ -20,7 +20,7 @@
 | Brain breaks | Box breathing (animated), stretch, 20-20-20 screen rest, movement | `focus.js` `brainBreak()` | Optional, never forced |
 | Parking lot | Quick scratchpad from the top bar | `focus.js` `openParkingLot()` | Listed under My Notes |
 | Gamification | XP, levels, 8 badges, optional streaks (off by default), progress bars | `js/store.js` | No points are ever taken away |
-| Reading accessibility | Font size, line spacing, text width, contrast, 5 background tints, dark mode, reduced motion, text-to-speech speed | `js/pages.js` `settings()`, `js/ui.js` `applySettings()` | System reduced-motion is respected |
+| Reading accessibility | Font size, line spacing, text width, contrast, 5 background tints, dark mode, reduced motion; read aloud with a free natural voice (Kokoro, runs in the browser; device voice as fallback), clean sentence-by-sentence reading, voice chooser + speed | `js/pages.js` `settings()`, `js/ui.js` `applySettings()` | System reduced-motion is respected |
 | Personal study | Personal notes per topic, highlights (select text → Highlight), bookmarks | `js/lesson.js` | Collected on the My Notes page |
 | Resume | Opening the app returns to the exact topic, tab and note section | `js/app.js`, `lesson.js` scroll tracking | |
 | Tutor | Ask FocusNest chat: 7 quick actions + free questions answered with matching slide excerpts (current chapter first) and slide numbers; refuses to guess | `js/tutor.js` | Works offline; nothing is sent anywhere |

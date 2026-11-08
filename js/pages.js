@@ -399,17 +399,66 @@
       "<h3>" + FN.icon("panels-top-left") + " Panels</h3>" +
       '<label class="switch"><input type="checkbox" data-set="navCollapsed"' + (st.navCollapsed ? " checked" : "") + "> <span>Collapse the left sidebar to icons</span></label>" +
       '<label class="switch"><input type="checkbox" data-set="outlineHidden"' + (st.outlineHidden ? " checked" : "") + "> <span>Hide the chapters column</span></label>" +
-      "<h3>" + FN.icon("volume-2") + " Text-to-speech</h3>" + rng("ttsRate", "Reading speed", 0.6, 1.6, 0.1, "×") + '<button class="btn btn-soft" id="ttsTest">' + FN.icon("play") + " Test voice</button>" +
+      "<h3>" + FN.icon("volume-2") + " Read aloud</h3>" +
+      // Voice type: the free natural voice (Kokoro, runs on this device) or the device's built-in voice.
+      sel("voiceEngine", "Voice type", [["natural", "Natural voice — human-sounding (free, runs on your device)"], ["device", "Device voice — built into your browser"]]) +
+      '<div id="naturalBox"' + (st.voiceEngine === "device" ? " hidden" : "") + '>' +
+        sel("naturalVoice", "Natural voice", FN.natural ? FN.natural.VOICES : []) +
+        sel("naturalQuality", "Voice quality", [["auto", "Smoothest — uses your graphics chip if it can (one-time ~326 MB)"], ["light", "Smaller download (~92 MB) — may pause between sentences"]]) +
+        '<p class="small voice-status" id="voiceStatus"></p></div>' +
+      '<div id="deviceBox"' + (st.voiceEngine === "device" ? "" : " hidden") + '>' +
+        // Device voice chooser: most natural voices first (filled by fillVoices, also when the browser loads voices late).
+        '<label class="set"><span>Device voice</span><select data-set="voice" id="voiceSel"></select></label></div>' +
+      rng("ttsRate", "Reading speed", 0.7, 1.3, 0.05, "×") +
+      '<div class="row"><button class="btn btn-soft" id="ttsTest">' + FN.icon("play") + ' Listen to this voice</button></div>' +
       "<h3>" + FN.icon("flame") + " Motivation</h3><label class=\"switch\"><input type=\"checkbox\" id=\"streakT\"" + (s.streakEnabled ? " checked" : "") + "> <span>Show daily streaks (optional, never punishes gaps)</span></label>" +
-            "<h3>" + FN.icon("database") + " Your data</h3><div class=\"row\"><button class=\"btn btn-ghost\" id=\"exportData\">" + FN.icon("download") + " Export progress (.json)</button><button class=\"btn btn-ghost danger\" id=\"resetData\">" + FN.icon("trash-2") + " Reset progress</button></div></section></div>";
+            "<h3>" + FN.icon("database") + " Your data</h3><div class=\"row\"><button class=\"btn btn-ghost\" id=\"exportData\">" + FN.icon("download") + " Export progress (.json)</button><button class=\"btn btn-ghost danger\" id=\"resetData\">" + FN.icon("trash-2") + " Reset progress</button></div></section></div>" +
+      // Credits: the free tools FocusNest uses for Read aloud (their licenses ask for attribution).
+      '<section class="card credits"><h3>' + FN.icon("heart-handshake") + " Credits</h3>" +
+      '<p class="muted small">Read aloud uses free, open tools that run inside your browser. Thank you to their authors.</p><ul>' +
+      [["Kokoro-82M voice model (Apache-2.0) — hexgrad", "https://huggingface.co/hexgrad/Kokoro-82M"],
+       ["Kokoro-82M-v1.0-ONNX — the browser version of the model on Hugging Face", "https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX"],
+       ["kokoro-js 1.2.1 (Apache-2.0) — runs Kokoro in the browser", "https://www.npmjs.com/package/kokoro-js"],
+       ["Transformers.js — Hugging Face", "https://huggingface.co/docs/transformers.js"],
+       ["Running Kokoro-82M in the browser — DEV Community", "https://dev.to/emojiiii/running-kokoro-82m-onnx-tts-model-in-the-browser-eeh"],
+       ["StreamingKokoroJS — privacy-first in-browser speech", "https://www.scriptbyai.com/privacy-first-tts-streaming-kokoro"],
+       ["HeadTTS — Kokoro in the browser with WebGPU", "https://github.com/met4citizen/HeadTTS"]]
+        .map(function (c) { return '<li><a href="' + c[1] + '" target="_blank" rel="noopener noreferrer">' + esc(c[0]) + "</a></li>"; }).join("") +
+      "</ul><p class=\"muted small\">Also used: Lucide icons, JSZip, PDF.js, and the Inter and Fraunces fonts.</p></section>";
     V().oninput = function (e) {
       var k = e.target.dataset.set; if (!k) return;
       var v = e.target.type === "checkbox" ? e.target.checked : e.target.type === "range" ? parseFloat(e.target.value) : e.target.value;
       FN.store.update(function (s) { s.settings[k] = v; });
       var out = e.target.parentNode.querySelector("output"); if (out) out.textContent = v + (k === "fontSize" ? "px" : k === "width" ? "ch" : k === "ttsRate" ? "×" : "");
+      if (k === "voice" || k === "ttsRate" || k === "voiceEngine" || k === "naturalVoice" || k === "naturalQuality") FN.stopSpeak();
+      if (k === "voiceEngine") { $("#naturalBox").hidden = v === "device"; $("#deviceBox").hidden = v !== "device"; voiceStatus(); }
+      if (k === "naturalQuality" && FN.natural) { FN.natural.reset(); voiceStatus(); }
       FN.applySettings();
     };
-    $("#ttsTest").onclick = function () { FN.speak("This is how lessons will sound when read aloud."); };
+    function fillVoices() {
+      var sel = $("#voiceSel"); if (!sel) return;
+      var list = FN.voices(), cur = FN.store.get().settings.voice;
+      if (!list.length) { sel.innerHTML = "<option>No English voices found in this browser</option>"; sel.disabled = true; return; }
+      sel.disabled = false;
+      sel.innerHTML = list.map(function (v, i) { return '<option value="' + esc(v.voiceURI) + '"' + (v.voiceURI === cur || (!cur && i === 0) ? " selected" : "") + ">" + esc(v.name.replace(/\s*\(English \((.+)\)\)/, " · $1")) + " — " + esc(v.lang) + (i === 0 ? "  (recommended)" : "") + "</option>"; }).join("");
+    }
+    fillVoices(); FN.onVoices = fillVoices;
+    /** voiceStatus(): shows whether the natural voice is downloaded, downloading, ready or unavailable. */
+    function voiceStatus() {
+      var el = $("#voiceStatus"); if (!el || !FN.natural) return;
+      var n = FN.natural.status();
+      el.innerHTML = !FN.natural.supported() ? FN.icon("circle-alert") + " Not available here (open FocusNest through <code>node server.js</code> in a modern browser). The device voice will be used."
+        : n.state === "ready" ? FN.icon("circle-check") + " Ready (" + (n.backend === "smooth" ? "smooth, using the graphics chip" : "light, using the processor") + ") — stored on this device, works offline."
+        : n.state === "loading" ? FN.icon("loader") + " Getting the voice ready… (see the progress bar)"
+        : n.state === "error" ? FN.icon("circle-alert") + " Could not load: " + esc(n.error) + ' <button class="link" id="voiceGet">Try again</button>'
+        : n.cached ? FN.icon("circle-check") + " Downloaded before — loads in a moment when you press Listen or Read aloud."
+        : FN.icon("download") + ' Downloads once the first time you use it (see Voice quality for the size). <button class="link" id="voiceGet">Download now</button>';
+      FN.icons();
+      var g = $("#voiceGet"); if (g) g.onclick = function () { FN.natural.load().catch(function () {}); voiceStatus(); };
+    }
+    voiceStatus(); FN.onVoiceStatus = voiceStatus;
+    // Listen button → reads a short natural sample with the chosen voice and speed.
+    $("#ttsTest").onclick = function () { FN.speak("Hi! I'll read your lessons to you with this voice. Web analytics is about measuring what people do online, and using that data to make better decisions."); };
     $("#streakT").onchange = function () { var on = this.checked; FN.store.update(function (s) { s.streakEnabled = on; }); };
     $("#exportData").onclick = function () { var a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(FN.store.get(), null, 2)], { type: "application/json" })); a.download = "focusnest-progress.json"; a.click(); };
     $("#resetData").onclick = function () {

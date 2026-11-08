@@ -7,16 +7,22 @@ FocusNest is built for one course, and students study it **one chapter at a time
 
 ## Run it
 
+**Double-click `Start FocusNest`** in the `focusnest` folder (Mac: `Start FocusNest.command`, Windows: `Start FocusNest.bat`). It starts the small local server and opens http://localhost:8080 in your browser. Keep its window open while you study. It needs [Node.js](https://nodejs.org), which is free.
+
+From a terminal you can run the same thing:
+
 ```bash
 cd focusnest
 node server.js       # → http://localhost:8080   (no npm install needed)
 ```
 
+> Don't open `index.html` directly. Browsers block the natural Read-aloud voice for pages opened as files, so FocusNest will tell you to use **Start FocusNest** instead.
+
 ## The Ask FocusNest chat
 
 The chat answers **only from the slides and lesson notes**. It finds the matching slides, preferring the chapter you are studying, and shows them with slide numbers. If nothing matches, it says so instead of guessing. It runs entirely in the browser: no AI service, no API key, nothing sent anywhere.
 
-You can also open `index.html` directly (file://); everything works the same.
+Opening `index.html` directly (file://) works for studying, but not for the natural Read-aloud voice.
 
 ## Folder map
 
@@ -72,6 +78,25 @@ node tests/check.js           # grading, spaced repetition, formulas, parser on 
 
 FocusNest has no analytics and no visitor tracking: no Google Analytics, no Tag Manager, no cookie banner. Progress, notes and added chapters stay in the student's own browser. The chat works offline too, so nothing the student types is sent anywhere.
 
+## Read aloud (natural voice)
+
+Read aloud uses **Kokoro**, a free, open (Apache-2.0) voice model that runs entirely in the student's browser. There is no account, no API key, and the text is never sent anywhere. The model is loaded from the jsDelivr CDN (`kokoro-js` 1.2.1) and Hugging Face.
+
+- **Smoothest (default when the computer's graphics chip supports WebGPU):** full-quality model, about 326 MB, downloaded once. It reads about 2× faster than real time, so there are no gaps.
+- **Smaller download (Settings → Read aloud → Voice quality):** about 92 MB, runs on the processor, and may pause between sentences.
+- **Download:** it happens the first time someone presses read aloud (or "Download now" in Settings), with a progress bar. After that the voice is stored on the device and works offline.
+- **Voices:** eight natural voices to choose from. Heart (American, best quality) is the default.
+- **If the natural voice can't run** (page opened as a file, or no internet for the first download), FocusNest says why and how to fix it. The basic device voice is used only if the student chooses it.
+- **Speed:** `server.js` sends cross-origin isolation headers so the voice can use several CPU cores. A plain static host (GitHub Pages) can't send them, so the light version is slower there.
+
+## Credits
+
+Read aloud is built on free, open tools (also listed in Settings → Credits):
+- [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) voice model (Apache-2.0), hexgrad
+- [Kokoro-82M-v1.0-ONNX](https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX), the browser version of the model
+- [kokoro-js](https://www.npmjs.com/package/kokoro-js) 1.2.1 (Apache-2.0) and [Transformers.js](https://huggingface.co/docs/transformers.js)
+- Background reading: [Running Kokoro-82M in the browser](https://dev.to/emojiiii/running-kokoro-82m-onnx-tts-model-in-the-browser-eeh), [StreamingKokoroJS](https://www.scriptbyai.com/privacy-first-tts-streaming-kokoro), [HeadTTS](https://github.com/met4citizen/HeadTTS)
+
 ## Choosing a chapter
 
 - On first visit the dashboard and the chapters column ask **which chapter** to study.
@@ -93,6 +118,10 @@ FocusNest has no analytics and no visitor tracking: no Google Analytics, no Tag 
 - Progress lives in one browser. Use **Export progress** in Settings to keep a copy.
 - Two worked examples use illustrative numbers that are not on the slides: the lead-generation example in Ch.1 topic 4 and one funnel line in Ch.1 topic 2. They appear under "Added explanation".
 
-## Deploy
+## Deploy (GitHub Pages)
 
-Upload the `focusnest/` folder to GitHub Pages / Netlify. It is a fully static site.
+The site is fully static: GitHub Pages serves this folder as it is (`.nojekyll` turns off GitHub's site builder).
+
+- **Live site:** https://aya-alshamali.github.io/digital_analytics/
+- **Natural voice:** works on the live site because it is served over https. On computers whose graphics chip the browser can use (WebGPU, most modern ones) it is smooth. On others it uses the light version, which can pause between sentences, because GitHub Pages can't send the speed-up headers that `server.js` sends.
+- **The Start FocusNest launchers** are only for running a copy on your own computer.

@@ -28,7 +28,8 @@ Every interactive control and what it does. The site records nothing about who v
 | Original slides | `side = "slides"` | Slide panel |
 | My notes | `side = "mynotes"` | Notes + highlights panel |
 | Bookmark | lesson click handler | Toggles bookmark |
-| 🔊 Read aloud | `FN.speak` | Reads the tab aloud |
+| Voice menu next to 🔊 | `change` handler in `js/lesson.js` | Switches the reading voice (natural voices, or device voices if chosen in Settings); remembered |
+| 🔊 Read aloud | `readAloud()` → `FN.speak` | Reads the tab's lesson text with a natural voice (skips buttons and slide chips); shows ■ while reading — press again to stop |
 | Tabs 1–7 (or keys 1–7) | links | Switch tab |
 | Next / previous tab bar | links | Next tab / next topic / final quiz |
 | "Slide N" chips | `openSlide(n)` | Shows that slide |
@@ -111,3 +112,12 @@ Every interactive control and what it does. The site records nothing about who v
 | Quick actions (7) | `action()` | Simpler explanation, example, steps, quiz question, summary, compare, prerequisites — from the lesson data |
 | ↺ Clear | clears `log` | Empties the chat |
 | ✕ Close | `toggle(false)` | Hides the chat panel |
+
+## Read aloud settings
+
+| Control | Visible result |
+|---|---|
+| Settings → Read aloud → Voice | Choose the voice; the most natural one is listed first as "recommended" |
+| Reading speed | 0.7× – 1.3× (default 0.95×) |
+| Listen to this voice | Plays a short sample with the chosen voice and speed |
+| Settings → Credits links | normal links (new tab) | Opens the pages of the free tools Read aloud uses |
