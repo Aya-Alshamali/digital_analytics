@@ -54,7 +54,9 @@
   }
 
   var log = [];
-  function say(who, html) { log.push({ who: who, html: html }); draw(); }
+  // Every chatbot answer ends with this line (the "Thinking…" placeholder is skipped).
+  var SIGNOFF = '<p class="signoff" dir="rtl" lang="ar">\u0628\u0627\u064a \u0627\u0634\u064a \u0628\u062f\u0643 \u0627\u064a\u0627\u0647 \u0628\u0633\u0627\u0639\u062f\u0643 \u0627\u0646\u0627 \u0648\u0644\u063a\u0648\u0631\u064a\u0644\u0627 \u0627\u0644\u064a \u0627\u0633\u0645\u0647 \u064a\u0648\u0633\u0641 "\u064a\u0648\u0633\u0641 \u0628\u0633\u0627\u0639\u062f \u0627\u0643\u062b\u0631"</p>';
+  function say(who, html) { if (who === "bot" && html.indexOf("typing") < 0) html += SIGNOFF; log.push({ who: who, html: html }); draw(); }
 
   function draw() {
     var el = document.getElementById("tutor"); if (!el || el.hidden) return;
