@@ -212,7 +212,7 @@
        mode "partial" = GTM "matches RegEx" style: matching ANY part is enough. */
     regex: function (stage, d, show) {
       var samples = d.samples || [], ch = d.challenges || [], cur = 0, full = d.mode === "full";
-      stage.innerHTML = '<div class="rx"><div class="rx-left"><p class="muted small">' + (full ? "GA4 style: the <strong>whole</strong> value must match." : "GTM style: matching <strong>any part</strong> of the value is enough.") + "</p>" +
+      stage.innerHTML = '<div class="rx"><div class="rx-left"><p class="muted small">' + (full ? "Full match: the <strong>whole</strong> value must match (like GA4 filters)." : "Partial match: matching <strong>any part</strong> of the value is enough.") + "</p>" +
         '<ol class="sel-tasks">' + ch.map(function (c, k) { return '<li><button class="task" data-k="' + k + '">' + esc(c.task) + "</button></li>"; }).join("") + "</ol>" +
         '<label class="sel-input">Your regex <input type="text" spellcheck="false" autocomplete="off" placeholder="e.g. ^/blog/"></label>' +
         '<div class="row"><button class="btn btn-primary" data-check>' + FN.icon("check") + " Check</button><button class=\"btn btn-ghost\" data-hint>Hint</button></div></div>" +
