@@ -32,7 +32,7 @@
       if (!ch) { ch = { id: p.chapter, deck: p.chapter, title: p.title, topics: [] }; chapters.push(ch); }
       ch.topics = ch.topics.concat(p.topics);
     });
-    var titles = { ch1: "Chapter 1 · Introduction to Web / Digital Analytics", ch2: "Chapter 2 · The Technical Essentials of Web Analytics" };
+    var titles = { ch1: "Chapter 1 · Introduction to Web / Digital Analytics", ch2: "Chapter 2 · The Technical Essentials of Web Analytics", ch3: "Chapter 3 · Regular Expressions for GA4 and GTM" };
     chapters.forEach(function (c) { if (titles[c.id]) c.title = titles[c.id]; });
     return {
       id: "dsma", origin: "sample",

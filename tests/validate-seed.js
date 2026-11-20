@@ -9,7 +9,7 @@ const root = path.join(__dirname, "..");
 const ctx = { window: {}, console };
 ctx.globalThis = ctx.window;
 vm.createContext(ctx);
-for (const f of ["js/schema.js", "data/slides.js", "data/ch1.js", "data/ch2a.js", "data/ch2b.js"]) {
+for (const f of ["js/schema.js", "data/slides.js", "data/slides-ch3.js", "data/ch1.js", "data/ch2a.js", "data/ch2b.js", "data/ch3a.js", "data/ch3b.js"]) {
   const p = path.join(root, f);
   if (fs.existsSync(p)) vm.runInContext(fs.readFileSync(p, "utf8"), ctx, { filename: f });
 }
@@ -28,6 +28,15 @@ for (const part of parts) {
     const refs = [...t.slides];
     JSON.stringify(t, (k, v) => { if ((k === "slide") && typeof v === "number") refs.push(v); if (k === "slides" && Array.isArray(v)) refs.push(...v); return v; });
     refs.filter(n => !(n >= 1 && n <= max)).forEach(n => errors.push(`${part.chapter}/${t.id}: slide ${n} does not exist (deck has ${max})`));
+    // Regex tester visuals: every challenge must be a valid pattern that matches some (not all) samples.
+    if (t.visual && t.visual.type === "regex") {
+      const d = t.visual.data || {}, samples = d.samples || [];
+      (d.challenges || []).forEach((c, i) => {
+        let re; try { re = new RegExp(d.mode === "full" ? "^(?:" + c.answer + ")$" : c.answer); } catch (e) { errors.push(`${part.chapter}/${t.id}: regex challenge ${i + 1} is invalid: ${c.answer}`); return; }
+        const n = samples.filter(s => re.test(s)).length;
+        if (n === 0 || n === samples.length) errors.push(`${part.chapter}/${t.id}: regex challenge ${i + 1} matches ${n} of ${samples.length} samples (needs some, not all)`);
+      });
+    }
     const levels = new Set((t.quiz || []).map(q => q.difficulty));
     if (levels.size < 3) errors.push(`${part.chapter}/${t.id}: quiz should cover easy, medium and hard`);
   }

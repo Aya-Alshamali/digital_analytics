@@ -271,7 +271,7 @@
   }
 
   /* ====================== VISUAL LEARNING ====================== */
-  var vizName = { flow: "Process flow", tree: "Hierarchy", timeline: "Timeline", bars: "Chart", calculator: "Calculator", dragsort: "Sorting activity", selector: "Selector playground", compare: "Comparison" };
+  var vizName = { flow: "Process flow", tree: "Hierarchy", timeline: "Timeline", bars: "Chart", calculator: "Calculator", dragsort: "Sorting activity", selector: "Selector playground", regex: "Regex tester", compare: "Comparison" };
   function visual() {
     var c = FN.courses.active(); if (!c) { V().innerHTML = noCourse(); return; }
     var list = FN.courses.topics(c).filter(function (x) { return x.topic.visual; });

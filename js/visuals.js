@@ -206,6 +206,50 @@
         rows.map(function (r, k) { return '<button class="cmp-row" role="row" data-k="' + k + '"><span role="rowheader">' + esc(r.label) + "</span>" + r.values.map(function (v) { return '<span role="cell">' + esc(v) + "</span>"; }).join("") + "</button>"; }).join("") + "</div>";
       stage.addEventListener("click", function (e) { var b = e.target.closest(".cmp-row[data-k]"); if (!b) return; var r = rows[+b.dataset.k]; show(r.label, r.detail || cols.map(function (c, j) { return c + ": " + r.values[j]; }).join(" · ")); FN.$$(".cmp-row", stage).forEach(function (x) { x.classList.toggle("on", x === b); }); });
       return { count: rows.length, step: function (i) { FN.$$(".cmp-row[data-k]", stage).forEach(function (b, k) { b.classList.toggle("hide", i >= 0 && k > i); b.classList.toggle("on", k === i); }); if (rows[i]) show(rows[i].label, rows[i].detail); } };
+    },
+    /* Regex tester: type a pattern, see live which sample values it matches.
+       mode "full"    = GA4 "matches regex" style: the WHOLE value must match.
+       mode "partial" = GTM "matches RegEx" style: matching ANY part is enough. */
+    regex: function (stage, d, show) {
+      var samples = d.samples || [], ch = d.challenges || [], cur = 0, full = d.mode === "full";
+      stage.innerHTML = '<div class="rx"><div class="rx-left"><p class="muted small">' + (full ? "GA4 style: the <strong>whole</strong> value must match." : "GTM style: matching <strong>any part</strong> of the value is enough.") + "</p>" +
+        '<ol class="sel-tasks">' + ch.map(function (c, k) { return '<li><button class="task" data-k="' + k + '">' + esc(c.task) + "</button></li>"; }).join("") + "</ol>" +
+        '<label class="sel-input">Your regex <input type="text" spellcheck="false" autocomplete="off" placeholder="e.g. ^/blog/"></label>' +
+        '<div class="row"><button class="btn btn-primary" data-check>' + FN.icon("check") + " Check</button><button class=\"btn btn-ghost\" data-hint>Hint</button></div></div>" +
+        '<ul class="rx-samples" aria-live="polite">' + samples.map(function (s, k) { return '<li data-k="' + k + '"><span class="rx-dot"></span><code>' + esc(s) + "</code></li>"; }).join("") + "</ul></div>";
+      var input = stage.querySelector("input");
+      function make(src) { try { return new RegExp(full ? "^(?:" + src + ")$" : src); } catch (e) { return null; } }
+      function matches(src) { var re = make(src); return re ? samples.map(function (s) { return re.test(s); }) : null; }
+      /** paint(): marks each sample as matched or not, and highlights the matched part (partial mode). */
+      function paint() {
+        var src = input.value, m = src ? matches(src) : samples.map(function () { return false; });
+        if (!m) { show("Not a valid regex yet", "Check brackets and special characters. A dot . means any character; write \\. for a real dot."); return null; }
+        var re = src && make(src);
+        FN.$$(".rx-samples li", stage).forEach(function (li, k) {
+          li.classList.toggle("hit", m[k]);
+          var s = samples[k], code = li.querySelector("code");
+          if (m[k] && !full && re) { var x = re.exec(s); code.innerHTML = esc(s.slice(0, x.index)) + "<mark>" + esc(x[0]) + "</mark>" + esc(s.slice(x.index + x[0].length)); }
+          else code.textContent = s;
+        });
+        return m;
+      }
+      function pick(k) { cur = k; FN.$$(".task", stage).forEach(function (b, j) { b.classList.toggle("on", j === k); }); show("Challenge " + (k + 1), ch[k].task); input.value = ""; paint(); input.focus(); }
+      input.addEventListener("input", paint);
+      input.addEventListener("keydown", function (e) { if (e.key === "Enter") stage.querySelector("[data-check]").click(); });
+      stage.addEventListener("click", function (e) {
+        var t = e.target.closest(".task"); if (t) return pick(+t.dataset.k);
+        if (e.target.closest("[data-hint]")) return show("Hint", ch[cur].hint || "Look at what the matching values have in common.");
+        if (!e.target.closest("[data-check]")) return;
+        var mine = paint(); if (!mine) return;
+        var want = matches(ch[cur].answer) || [];
+        var ok = input.value !== "" && mine.every(function (v, k) { return v === want[k]; });
+        var n = want.filter(Boolean).length;
+        show(ok ? "Correct!" : "Not quite", ok ? "Your pattern matches exactly the right " + n + " value(s). One possible answer: " + ch[cur].answer
+          : "It should match " + n + " of the " + samples.length + " values (" + samples.filter(function (s, k) { return want[k]; }).join(", ") + "). Adjust it, or press Hint.");
+        if (ok) FN.$$(".task", stage)[cur].classList.add("done");
+      });
+      if (ch.length) pick(0);
+      return { count: 0, step: function () {} };
     }
   };
 

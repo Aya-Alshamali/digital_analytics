@@ -40,7 +40,7 @@
   var FN = (root.FN = root.FN || {});
 
   var QUESTION_TYPES = ["mcq", "tf", "multi", "match", "fill"];
-  var VISUAL_TYPES = ["flow", "tree", "timeline", "bars", "calculator", "dragsort", "selector", "compare"];
+  var VISUAL_TYPES = ["flow", "tree", "timeline", "bars", "calculator", "dragsort", "selector", "compare", "regex"];
   var LEVELS = ["easy", "medium", "hard"];
 
   /**

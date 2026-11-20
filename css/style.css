@@ -480,3 +480,11 @@ body.in-focus .app { visibility: hidden; }
 .voice-quick:focus-within { outline: 3px solid var(--amber); outline-offset: 2px; }
 /* Credits card (Settings) */
 .credits { margin-top: 18px; } .credits ul { margin: 6px 0 10px; padding-left: 20px; } .credits li { margin-bottom: 6px; font-size: .9rem; }
+/* Regex tester visual (Chapter 3) */
+.rx { display: grid; grid-template-columns: minmax(240px, 1fr) minmax(260px, 1.1fr); gap: 18px; }
+.rx-samples { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; align-content: start; }
+.rx-samples li { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border: 1.5px solid var(--line); border-radius: 10px; background: var(--surface); transition: border-color .2s, background .2s; }
+.rx-samples li.hit { border-color: var(--green); background: var(--green-soft); }
+.rx-samples code { font-size: .88rem; word-break: break-all; } .rx-samples mark { background: #fde7a8; border-radius: 3px; }
+.rx-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--line-2); flex-shrink: 0; } .rx-samples li.hit .rx-dot { background: var(--green); }
+@media (max-width: 760px) { .rx { grid-template-columns: 1fr; } }
