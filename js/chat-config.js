@@ -15,6 +15,6 @@
 window.FN_CHAT = {
   provider: "Groq",
   endpoint: "https://api.groq.com/openai/v1/chat/completions",
-  relay: "",                                   // e.g. "https://focusnest-chat.<you>.workers.dev" — leave "" to use a key from Settings
+  relay: "https://focusnest-chat.focusnest-aya.workers.dev",                                   // e.g. "https://focusnest-chat.<you>.workers.dev" — leave "" to use a key from Settings
   models: ["openai/gpt-oss-120b", "openai/gpt-oss-20b"]
 };

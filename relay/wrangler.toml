@@ -1,0 +1,5 @@
+# Cloudflare Worker settings for the FocusNest chatbot relay (see relay/README.md).
+# The Groq key is NOT here: it is stored in Cloudflare with `wrangler secret put GROQ_KEY`.
+name = "focusnest-chat"
+main = "worker.js"
+compatibility_date = "2026-10-01"
