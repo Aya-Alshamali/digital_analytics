@@ -411,6 +411,13 @@
         '<label class="set"><span>Device voice</span><select data-set="voice" id="voiceSel"></select></label></div>' +
       rng("ttsRate", "Reading speed", 0.7, 1.3, 0.05, "×") +
       '<div class="row"><button class="btn btn-soft" id="ttsTest">' + FN.icon("play") + ' Listen to this voice</button></div>' +
+      "<h3>" + FN.icon("message-circle") + " Chatbot (Ask FocusNest)</h3>" +
+      // Chatbot key: saved only in this browser (js/chatbot.js). Not needed when a relay is set in js/chat-config.js.
+      (FN.chatbot && FN.chatbot.usesRelay() ? '<p class="small">' + FN.icon("circle-check") + " The AI chatbot is connected for everyone.</p>"
+        : '<p class="muted small">Paste a free Groq key to turn on the AI chatbot. Get one at <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer">console.groq.com/keys</a>. It is saved only in this browser.</p>' +
+          '<form class="row" id="chatKeyForm" autocomplete="off"><input type="password" id="chatKey" placeholder="' + (FN.chatbot && FN.chatbot.getKey() ? "Key saved \u2022\u2022\u2022\u2022 (paste to replace)" : "gsk_\u2026") + '" aria-label="Groq API key" spellcheck="false">' +
+          '<button class="btn btn-primary">Save</button>' + (FN.chatbot && FN.chatbot.getKey() ? '<button type="button" class="btn btn-ghost danger" id="chatKeyRemove">Remove</button>' : "") + "</form>" +
+          '<p class="small" id="chatKeyStatus">' + (FN.chatbot && FN.chatbot.getKey() ? FN.icon("circle-check") + " AI chatbot is on in this browser." : FN.icon("circle") + " AI chatbot is off \u2014 Ask FocusNest answers from the slides.") + "</p>") +
       "<h3>" + FN.icon("flame") + " Motivation</h3><label class=\"switch\"><input type=\"checkbox\" id=\"streakT\"" + (s.streakEnabled ? " checked" : "") + "> <span>Show daily streaks (optional, never punishes gaps)</span></label>" +
             "<h3>" + FN.icon("database") + " Your data</h3><div class=\"row\"><button class=\"btn btn-ghost\" id=\"exportData\">" + FN.icon("download") + " Export progress (.json)</button><button class=\"btn btn-ghost danger\" id=\"resetData\">" + FN.icon("trash-2") + " Reset progress</button></div></section></div>" +
       // Credits: the free tools FocusNest uses for Read aloud (their licenses ask for attribution).
@@ -459,6 +466,15 @@
     voiceStatus(); FN.onVoiceStatus = voiceStatus;
     // Listen button → reads a short natural sample with the chosen voice and speed.
     $("#ttsTest").onclick = function () { FN.speak("Hi! I'll read your lessons to you with this voice. Web analytics is about measuring what people do online, and using that data to make better decisions."); };
+    var ckf = $("#chatKeyForm");
+    if (ckf) {
+      ckf.onsubmit = function (e) {
+        e.preventDefault(); var v = $("#chatKey").value.trim(); if (!v) return;
+        if (!/^gsk_[A-Za-z0-9]{20,}$/.test(v)) { FN.toast("That doesn't look like a Groq key (it starts with gsk_)."); return; }
+        FN.chatbot.setKey(v); if (FN.tutor && FN.tutor.resetAI) FN.tutor.resetAI(); FN.toast("Chatbot key saved in this browser."); settings();
+      };
+      var ckr = $("#chatKeyRemove"); if (ckr) ckr.onclick = function () { FN.chatbot.setKey(""); FN.toast("Chatbot key removed."); settings(); };
+    }
     $("#streakT").onchange = function () { var on = this.checked; FN.store.update(function (s) { s.streakEnabled = on; }); };
     $("#exportData").onclick = function () { var a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(FN.store.get(), null, 2)], { type: "application/json" })); a.download = "focusnest-progress.json"; a.click(); };
     $("#resetData").onclick = function () {

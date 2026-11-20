@@ -488,3 +488,12 @@ body.in-focus .app { visibility: hidden; }
 .rx-samples code { font-size: .88rem; word-break: break-all; } .rx-samples mark { background: #fde7a8; border-radius: 3px; }
 .rx-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--line-2); flex-shrink: 0; } .rx-samples li.hit .rx-dot { background: var(--green); }
 @media (max-width: 760px) { .rx { grid-template-columns: 1fr; } }
+/* Ask FocusNest AI chatbot (js/chatbot.js) */
+.tutor-mode.ai { background: var(--blue-soft); } .tutor-mode.warn { background: var(--amber-soft); color: var(--ink); }
+.ai-answer p { margin: 0 0 8px; } .ai-answer ul, .ai-answer ol { padding-left: 20px; margin: 4px 0 8px; } .ai-answer li { margin-bottom: 4px; }
+.ai-answer code { background: var(--sage-50); padding: 1px 5px; border-radius: 5px; }
+.extra-tag { display: inline-block; font-size: .68rem; font-weight: 700; letter-spacing: .03em; padding: 1px 6px; border-radius: 5px; background: var(--amber-soft); color: #9a6a1e; vertical-align: 1px; }
+.chip-slide.inline { padding: 1px 7px; font-size: .72rem; vertical-align: 1px; } .slide-cite { color: var(--blue); font-size: .85em; }
+.followups { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); } .followups .chip { text-align: left; }
+.typing svg { animation: spin 1.2s linear infinite; }
+#chatKeyForm input { flex: 1; min-width: 160px; font-family: ui-monospace, monospace; }

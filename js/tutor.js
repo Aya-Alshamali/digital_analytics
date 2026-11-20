@@ -1,19 +1,26 @@
 /* =====================================================================
    FILE: js/tutor.js
    PURPOSE (beginner summary):
-     "Ask FocusNest" — a collapsible help panel for the lesson you are on.
-     It answers ONLY from your slides and lesson notes: it finds the slides
-     that match your question (preferring the chapter you are studying) and
-     shows them with slide numbers. If nothing matches, it says so — it never
-     guesses. Everything happens in the browser; nothing is sent anywhere.
+     "Ask FocusNest" — the chat panel for the lesson you are on.
+       1. AI chatbot (Groq, free — see js/chatbot.js): when a key is saved in
+          Settings → Chatbot (or a relay is set in js/chat-config.js), each
+          question is sent with the open lesson and the best-matching slides,
+          plus the last few messages so follow-ups work. Answers cite slides;
+          anything not from the slides is marked "Extra"; each ends with a
+          quick-check question and 3 suggested follow-ups.
+       2. Slide search (always available, offline): finds the slides that
+          match your question and shows them with slide numbers. Used when the
+          chatbot is off or can't answer — it never guesses.
    QUICK ACTIONS: explain simply · another example · step by step · quiz me ·
      summarize · compare two concepts · prerequisites.
-   DEPENDENCIES: js/ui.js, js/course.js, js/quiz.js.
+   DEPENDENCIES: js/ui.js, js/course.js, js/quiz.js, js/chatbot.js.
    ===================================================================== */
 (function () {
   "use strict";
   var FN = (window.FN = window.FN || {});
-  var esc = FN.esc, ctx = null;
+  var esc = FN.esc, ctx = null, aiProblem = null, busy = false;
+  var history = [];   // what the chatbot remembers: [{role:"user"|"assistant", content}]
+  function aiOn() { return FN.chatbot && FN.chatbot.available() && !aiProblem; }
 
   var STOP = "the a an and or of to in on for is are was be by with as at it this that what why how which do does from can i you your me my".split(" ");
   function terms(s) { return String(s).toLowerCase().replace(/[^a-z0-9\- ]+/g, " ").split(/\s+/).filter(function (w) { return w.length > 2 && STOP.indexOf(w) < 0; }); }
@@ -56,12 +63,14 @@
       '<div class="tutor-head"><div><strong>' + FN.icon("sparkles") + ' Ask FocusNest</strong><small>' + (t ? esc(t.title) : ch ? esc(ch.title) : "Choose a chapter to ask about it") + "</small></div>" +
       '<div class="row tight">' + (log.length ? '<button class="icon-btn" data-tu="clear" title="Clear" aria-label="Clear the conversation">' + FN.icon("rotate-ccw") + "</button>" : "") +
       '<button class="icon-btn" data-tu="close" aria-label="Close tutor">' + FN.icon("x") + "</button></div></div>" +
-      '<p class="tutor-mode">' + FN.icon("file-search") + " Answers come only from your slides and lesson notes.</p>" +
+      (aiOn() ? '<p class="tutor-mode ai">' + FN.icon("sparkles") + " AI chatbot on (Groq). Facts come from your slides; anything extra is marked <span class=\"extra-tag\">Extra</span>. Questions are sent to Groq.</p>"
+        : aiProblem ? '<p class="tutor-mode warn">' + FN.icon("triangle-alert") + " " + esc(aiProblem) + " For now, answers come from your slides.</p>"
+        : '<p class="tutor-mode">' + FN.icon("file-search") + ' Answers come from your slides. <a href="#/settings">Turn on the AI chatbot</a> in Settings → Chatbot.</p>') +
       (t ? '<div class="tutor-actions">' +
         [["simple", "Explain this more simply"], ["example", "Give me another example"], ["steps", "Walk me through it step by step"], ["quiz", "Quiz me on this"], ["summary", "Summarize this section"], ["compare", "Compare two concepts"], ["prereq", "What do I need to know first?"]]
           .map(function (a) { return '<button class="chip" data-act="' + a[0] + '">' + a[1] + "</button>"; }).join("") + "</div>" : "") +
       '<div class="tutor-log" aria-live="polite">' + log.map(function (m) { return '<div class="msg ' + m.who + '">' + m.html + "</div>"; }).join("") + "</div>" +
-      '<form class="tutor-form"><input type="text" maxlength="400" placeholder="' + (t ? "Ask about this lesson…" : "Ask about the course…") + '" aria-label="Your question"><button class="btn btn-primary" aria-label="Send">' + FN.icon("send") + "</button></form>";
+      '<form class="tutor-form"><input type="text" maxlength="800" placeholder="' + (t ? "Ask about this lesson…" : "Ask about the course…") + '" aria-label="Your question"><button class="btn btn-primary" aria-label="Send">' + FN.icon("send") + "</button></form>";
     FN.icons();
     var lg = el.querySelector(".tutor-log"); lg.scrollTop = lg.scrollHeight;
   }
@@ -79,6 +88,14 @@
   function action(kind) {
     var t = ctx.topic, n = section(), out = "";
     var label = { simple: "Explain this more simply", example: "Give me another example", steps: "Walk me through it step by step", quiz: "Quiz me on this", summary: "Summarize this section", compare: "Compare two concepts", prereq: "What do I need to know first?" }[kind];
+    var aiPrompts = {
+      simple: "Explain the section \u201c" + n.heading + "\u201d more simply, as if I'm new to it. Use one everyday analogy.",
+      example: "Give me a new, realistic example of \u201c" + n.heading + "\u201d that is different from the ones in the lesson, then show how it connects to the slides.",
+      steps: "Walk me through \u201c" + t.title + "\u201d step by step. One small step at a time, numbered.",
+      summary: "Summarize the section \u201c" + n.heading + "\u201d in 4 bullet points I could revise from before an exam.",
+      prereq: "What do I need to understand first before \u201c" + t.title + "\u201d? Point me to earlier topics or slides in the course."
+    };
+    if (aiOn() && aiPrompts[kind]) return ask(aiPrompts[kind], label);   // "Quiz me" and "Compare" stay instant and offline
     say("me", esc(label));
     if (kind === "simple") out = "<p><strong>" + esc(n.heading) + "</strong></p><p>" + esc(n.simple) + "</p>" + FN.badgeAI + ref(n.slides);
     if (kind === "summary") out = "<p><strong>Summary — " + esc(n.heading) + "</strong></p><ul>" + (n.exam || []).map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") + "</ul>" + ref(n.slides);
@@ -113,19 +130,87 @@
     say("bot", out);
   }
 
+  /** material(question): the course content sent with an AI question (kept short for the free plan's limits). */
+  function material(q) {
+    var course = FN.courses.active(), ch = chapterNow(), t = ctx && ctx.topic, out = ["COURSE: " + course.title];
+    if (ch) out.push("CHAPTER BEING STUDIED: " + ch.title);
+    if (t) {
+      out.push("\nLESSON OPEN: " + t.title + " (slides " + t.slides.join(", ") + ")\n" + (t.overview.about || ""));
+      if (ctx.section) out.push("The student is reading the section: " + section().heading);
+      t.notes.forEach(function (n) {
+        out.push("\n## " + n.heading + " (slides " + n.slides.join(", ") + ")\n" + n.simple + "\nKey points: " + (n.exam || []).join(" | ") +
+          ((n.definitions || []).length ? "\nDefinitions: " + n.definitions.map(function (d) { return d.term + ": " + d.def; }).join(" | ") : ""));
+      });
+    }
+    var hits = search(course, q, t, 6);
+    if (hits.length) out.push("\nSLIDES THAT MATCH THE QUESTION:");
+    hits.forEach(function (h) {
+      var sl = FN.courses.slide(course, h.deck, h.slide), owner = FN.courses.chapters().filter(function (c) { return c.deck === h.deck; })[0];
+      var label = (ch && h.deck === ch.deck ? "" : (owner ? owner.title.split(" \u00b7 ")[0].replace("Chapter ", "Ch.") + " " : "")) + "slide " + h.slide;
+      out.push("--- " + label + ": " + sl.title + "\n" + (sl.text.join("\n") + (sl.notes ? "\n[speaker notes] " + sl.notes : "")).slice(0, 700));
+    });
+    return out.join("\n").slice(0, 11000);
+  }
+
   /**
-   * FUNCTION: ask(question)
-   * PURPOSE: free-text question → matching slide excerpts with slide numbers.
-   * FAILURE: nothing matches → says so instead of guessing.
+   * FUNCTION: formatAnswer(text)
+   * PURPOSE: turns the chatbot's light formatting into safe HTML: **bold**, "- " bullets,
+   *   "1. " lists, paragraphs, (slide N) → clickable slide chip, [Extra] → label.
+   *   Everything is escaped first, so the AI can never inject HTML.
    */
-  function ask(q) {
-    say("me", esc(q));
+  function formatAnswer(text) {
+    var lines = esc(text).split(/\n/), html = "", list = null;
+    function close() { if (list) { html += "</" + list + ">"; list = null; } }
+    lines.forEach(function (l) {
+      var b = l.match(/^\s*[-*\u2022]\s+(.*)/), n = l.match(/^\s*\d+[.)]\s+(.*)/);
+      if (b || n) { var tag = b ? "ul" : "ol"; if (list !== tag) { close(); html += "<" + tag + ">"; list = tag; } html += "<li>" + (b || n)[1] + "</li>"; }
+      else if (!l.trim()) close();
+      else { close(); html += "<p>" + l + "</p>"; }
+    });
+    close();
+    var inLesson = ctx && location.hash.indexOf("#/learn/") === 0;
+    return html
+      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+      .replace(/`([^`]+)`/g, "<code>$1</code>")
+      .replace(/\[Extra\]/gi, '<span class="extra-tag" title="Not from your slides">Extra</span>')
+      .replace(/\((Ch\.\s?\d+\s)?slides? (\d+)((?:\s*(?:,|and|\u2013|-)\s*\d+)*)\)/gi, function (all, other, first, rest) {
+        if (other || !inLesson) return '<span class="slide-cite">' + all + "</span>";
+        var nums = [first].concat(rest.match(/\d+/g) || []);
+        return nums.map(function (x) { return '<button class="chip chip-slide inline" data-slide="' + x + '">' + FN.icon("presentation") + " " + x + "</button>"; }).join(" ");
+      });
+  }
+
+  /** slideAnswer(question, prefix): the offline answer — matching slide excerpts with slide numbers. */
+  function slideAnswer(q, prefix) {
     var hits = search(FN.courses.active(), q, ctx && ctx.topic);
-    if (!hits.length) { say("bot", "<p>I couldn't find this in your slides, so I won't guess. Try different words, or check the original slides.</p>"); return; }
-    say("bot", "<p>Here is what your slides say:</p>" + hits.map(function (h) {
+    if (!hits.length) { say("bot", (prefix || "") + "<p>I couldn't find this in your slides, so I won't guess. Try different words, or check the original slides.</p>"); return; }
+    say("bot", (prefix || "") + "<p>Here is what your slides say:</p>" + hits.map(function (h) {
       var owner = FN.courses.chapters().filter(function (c) { return c.deck === h.deck; })[0];
-      return "<blockquote>" + esc(h.snippet) + "<footer>" + esc(h.title) + " · " + (ctx && h.deck === ctx.chapter.deck ? FN.slideChips([h.slide]) : esc(owner ? owner.title.split(" · ")[0] : h.deckName) + " slide " + h.slide) + "</footer></blockquote>";
+      return "<blockquote>" + esc(h.snippet) + "<footer>" + esc(h.title) + " \u00b7 " + (ctx && h.deck === ctx.chapter.deck ? FN.slideChips([h.slide]) : esc(owner ? owner.title.split(" \u00b7 ")[0] : h.deckName) + " slide " + h.slide) + "</footer></blockquote>";
     }).join("") + FN.badgeSlides);
+  }
+
+  /**
+   * FUNCTION: ask(question, shownAs)
+   * PURPOSE: question → AI chatbot answer using the course material (or slide excerpts offline).
+   * FAILURE: chatbot error → shows the reason and answers from the slides instead.
+   */
+  function ask(q, shownAs) {
+    if (busy) return;
+    say("me", esc(shownAs || q));
+    if (!aiOn()) return slideAnswer(q);
+    busy = true;
+    say("bot", '<p class="muted typing">' + FN.icon("loader") + " Thinking with your slides\u2026</p>");
+    FN.chatbot.ask(q, material(q), history).then(function (r) {
+      log.pop();
+      history.push({ role: "user", content: q }, { role: "assistant", content: r.answer });
+      say("bot", '<div class="ai-answer">' + formatAnswer(r.answer) + "</div>" +
+        (r.followups.length ? '<div class="followups">' + r.followups.map(function (f) { return '<button class="chip" data-follow="' + esc(f) + '">' + esc(f) + "</button>"; }).join("") + "</div>" : ""));
+    }, function (e) {
+      log.pop();
+      aiProblem = e.message;
+      slideAnswer(q, '<p class="muted small">' + FN.icon("triangle-alert") + " " + esc(e.message) + " Here is what your slides say instead.</p>");
+    }).then(function () { busy = false; });
   }
 
   function toggle(force) {
@@ -133,7 +218,7 @@
     var show = force === undefined ? el.hidden : force;
     el.hidden = !show; btn.setAttribute("aria-expanded", show);
     document.getElementById("app").classList.toggle("tutor-open", show);
-    if (show) { draw(); var i = el.querySelector("input"); if (i) i.focus(); }
+    if (show) { aiProblem = null; draw(); var i = el.querySelector("input"); if (i) i.focus(); }
   }
 
   document.addEventListener("DOMContentLoaded", function () {
@@ -142,7 +227,8 @@
     // Tutor buttons: quick actions, close, clear, compare, inline quiz answers, slide chips.
     el.addEventListener("click", function (e) {
       if (e.target.closest('[data-tu="close"]')) return toggle(false);
-      if (e.target.closest('[data-tu="clear"]')) { log = []; draw(); return; }
+      if (e.target.closest('[data-tu="clear"]')) { log = []; history = []; draw(); return; }
+      var f = e.target.closest("[data-follow]"); if (f) return ask(f.dataset.follow);
       var a = e.target.closest("[data-act]"); if (a && ctx) return action(a.dataset.act);
       if (e.target.closest("[data-cmp]")) {
         var v = ctx.topic.overview.vocabulary, x = v[+el.querySelector("[data-c1]").value], y = v[+el.querySelector("[data-c2]").value];
@@ -164,5 +250,5 @@
   });
 
   /** setContext(): called when a lesson opens. A new topic starts a fresh conversation. */
-  FN.tutor = { setContext: function (c) { if (!ctx || !c || ctx.topic.id !== c.topic.id) log = []; ctx = c; draw(); }, toggle: toggle, search: search };
+  FN.tutor = { setContext: function (c) { if (!ctx || !c || ctx.topic.id !== c.topic.id) { log = []; history = []; } ctx = c; draw(); }, toggle: toggle, search: search, formatAnswer: formatAnswer, resetAI: function () { aiProblem = null; draw(); } };
 })();

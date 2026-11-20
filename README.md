@@ -18,11 +18,16 @@ node server.js       # → http://localhost:8080   (no npm install needed)
 
 > Don't open `index.html` directly. Browsers block the natural Read-aloud voice for pages opened as files, so FocusNest will tell you to use **Start FocusNest** instead.
 
-## The Ask FocusNest chat
+## The Ask FocusNest chat (AI chatbot)
 
-The chat answers **only from the slides and lesson notes**. It finds the matching slides, preferring the chapter you are studying, and shows them with slide numbers. If nothing matches, it says so instead of guessing. It runs entirely in the browser: no AI service, no API key, nothing sent anywhere.
+The chat panel can use a free AI chatbot from **Groq** (no billing, ever). It works straight from the browser, so it runs on GitHub Pages too.
 
-Opening `index.html` directly (file://) works for studying, but not for the natural Read-aloud voice.
+- **Turn it on:** Settings → Chatbot. Paste a free key from https://console.groq.com/keys. It is saved only in that browser and is never committed to this repository.
+- **For everyone, with no key:** set `relay` in `js/chat-config.js` to a small relay (for example a free Cloudflare Worker) that keeps the key on the server side.
+- **What it reads:** the open lesson (notes, key points, definitions) and the slides that best match the question, from any chapter, plus the last few messages.
+- **How it answers:** it cites slides as clickable chips and marks anything not on the slides as **Extra**. Each answer ends with a quick-check question and three follow-up suggestions.
+- **Models:** `openai/gpt-oss-120b`, with `openai/gpt-oss-20b` as a fallback. The free plan allows about 1,000 questions a day per model.
+- **When it's off or can't answer:** the chat answers from the slides and says why.
 
 ## Folder map
 
