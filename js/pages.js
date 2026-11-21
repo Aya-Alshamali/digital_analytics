@@ -407,7 +407,7 @@
     function sel(key, label, opts) { return '<label class="set"><span>' + label + '</span><select data-set="' + key + '">' + opts.map(function (o) { return '<option value="' + o[0] + '"' + (st[key] === o[0] ? " selected" : "") + ">" + o[1] + "</option>"; }).join("") + "</select></label>"; }
     V().innerHTML = head("Settings", "Make the page comfortable for your eyes and attention.", "settings-2") +
       '<div class="grid-2"><section class="card"><h3>' + FN.icon("type") + " Reading</h3>" + rng("fontSize", "Font size", 14, 24, 1, "px") + rng("lineHeight", "Line spacing", 1.4, 2.2, 0.1, "") + rng("width", "Text width", 50, 100, 2, "ch") +
-      sel("contrast", "Contrast", [["normal", "Normal"], ["high", "High contrast"]]) + sel("bg", "Background", [["paper", "Soft paper"], ["white", "White"], ["sage", "Sage tint"], ["cream", "Warm cream"], ["blue", "Cool blue"]]) +
+      sel("contrast", "Contrast", [["normal", "Normal"], ["high", "High contrast"]]) + sel("bg", "Background", [["paper", "Mint (FocusNest)"], ["white", "White"], ["sage", "Sage tint"], ["cream", "Warm cream"], ["blue", "Cool blue"]]) +
       '<p class="sample-text">Sample: “Web analytics is the methodological study of online patterns and trends.”</p></section>' +
       '<section class="card"><h3>' + FN.icon("sun-moon") + " Display & motion</h3>" + sel("theme", "Theme", [["light", "Light"], ["dark", "Dark"]]) +
       '<label class="switch"><input type="checkbox" data-set="reduceMotion"' + (st.reduceMotion ? " checked" : "") + "> <span>Reduce animation</span></label>" +
