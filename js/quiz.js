@@ -172,24 +172,31 @@
       qs.forEach(function (q, k) { var s = (q._topic || o.topicId) + "|" + q.section; bySec[s] = bySec[s] || { ok: 0, n: 0, q: q }; bySec[s].n++; if (res[k]) bySec[s].ok++; });
       var strong = [], weak = [];
       Object.keys(bySec).forEach(function (k) { (bySec[k].ok === bySec[k].n ? strong : weak).push(bySec[k]); });
-      FN.store.update(function (s) {
+      if (!o.retry) FN.store.update(function (s) {
         s.quizHistory.push({ scope: o.topicId, mode: o.mode, level: o.level, correct: correct, total: qs.length, at: Date.now(), missed: weak.map(function (w) { return (w.q._topic || o.topicId) + "|" + w.q.section; }) });
         if (s.quizHistory.length > 200) s.quizHistory.shift();
       });
-      if (o.onDone) o.onDone(pct, correct, qs.length);
+      if (o.onDone && !o.retry) o.onDone(pct, correct, qs.length);
+      var missed = qs.filter(function (q, k) { return !res[k]; });
+      if (o.retry && !missed.length) FN.celebrate("All correct now — you practised until it stuck!", true);
+      else if (pct >= 80) FN.celebrate("Great quiz!", true); else if (pct >= 60) FN.celebrate();
       var name = function (w) { return esc(o.sectionName ? o.sectionName(w.q.section, w.q._topic) : w.q.section); };
       el.innerHTML = '<div class="quiz-sum">' +
         '<div class="score-ring" style="--p:' + pct + '"><span>' + pct + "%</span></div>" +
-        "<h3>" + (pct >= 80 ? "Excellent work!" : pct >= 60 ? "Good progress!" : "Every attempt builds memory.") + "</h3>" +
+        "<h3>" + (o.retry && !missed.length ? "You got them all right!" : pct >= 80 ? "Excellent work!" : pct >= 60 ? "Good progress!" : "Every attempt builds memory.") + "</h3>" +
         '<p class="muted">' + correct + " of " + qs.length + " correct · accuracy " + pct + "% · " + esc(o.mode) + " mode · " + esc(o.level) + "</p>" +
         '<div class="sum-cols"><div><h4>' + FN.icon("thumbs-up") + " Strengths</h4>" + (strong.length ? "<ul>" + strong.map(function (w) { return "<li>" + name(w) + "</li>"; }).join("") + "</ul>" : '<p class="muted">Keep going — strengths appear here.</p>') + "</div>" +
         "<div><h4>" + FN.icon("refresh-cw") + " Revise next</h4>" + (weak.length ? "<ul>" + weak.map(function (w) { return '<li><button class="link" data-revise="' + esc(w.q.section) + '" data-topic="' + esc(w.q._topic || o.topicId) + '">' + name(w) + "</button> <span class=\"muted\">(" + w.ok + "/" + w.n + ")</span></li>"; }).join("") + "</ul>" : '<p class="muted">Nothing to revise — well done.</p>') + "</div></div>" +
         '<details class="review"><summary>Review every question</summary>' + qs.map(function (q, k) {
           return '<div class="rev ' + (res[k] ? "ok" : "no") + '"><p><strong>' + (k + 1) + ". " + esc(q.prompt) + "</strong></p><p>" + (res[k] ? "✓ Correct" : "✗ Your answer: " + esc(yourText(q, answers[k])) + " · Correct: " + esc(correctText(q))) + '</p><p class="muted">' + esc(q.explain) + "</p></div>";
         }).join("") + "</details>" +
-        '<div class="row"><button class="btn btn-primary" data-again>' + FN.icon("rotate-ccw") + " Try again</button></div></div>";
+        '<div class="row">' + (missed.length ? '<button class="btn btn-primary" data-retry>' + FN.icon("repeat") + " Practise the " + missed.length + " missed until right</button>" : "") +
+        '<button class="btn ' + (missed.length ? "btn-ghost" : "btn-primary") + '" data-again>' + FN.icon("rotate-ccw") + " " + (o.retry ? "Back to full quiz" : "Try again") + "</button></div></div>";
       FN.icons();
-      el.querySelector("[data-again]").onclick = function () { start(el, o); };
+      el.querySelector("[data-again]").onclick = function () { start(el, o.retry ? o.base : o); };
+      // Practise until right: only the missed questions, again and again until all are correct (not saved as a new score).
+      var rb = el.querySelector("[data-retry]");
+      if (rb) rb.onclick = function () { start(el, Object.assign({}, o, { questions: missed.map(function (q) { var c = Object.assign({}, q); delete c._rights; return c; }), max: missed.length, retry: true, base: o.base || o })); };
     }
     function yourText(q, a) {
       if (a === undefined) return "(no answer)";

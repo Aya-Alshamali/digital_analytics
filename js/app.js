@@ -101,6 +101,7 @@
     document.getElementById("outline").addEventListener("click", function (e) { if (e.target.closest("a")) document.getElementById("app").classList.remove("outline-open"); });
     // Parking lot button → js/focus.js openParkingLot.
     document.getElementById("parkingBtn").onclick = FN.focus.openParkingLot;
+    document.getElementById("buddyBtn").onclick = FN.focus.studyWithMe;
     // Timer chip → timer panel (events from startTimer/finish).
     document.getElementById("timerChip").onclick = function (e) { if (e.target.closest("#timerOpen")) FN.focus.openTimer(); };
     // Keep the system "reduce motion" preference in sync while the app is open.

@@ -152,7 +152,7 @@
       '<div class="dash-grid">' +
       (res ? '<a class="card resume" href="' + esc(s.resume.hash) + '"><span class="eyebrow">' + FN.icon("history") + " Resume where you left off</span><strong>" + esc(res.topic.title) + "</strong><small>" + esc(res.chapter.title) + " · " + esc(s.resume.hash.split("/")[3] || "overview") + "</small><span class=\"btn btn-primary\">Continue " + FN.icon("arrow-right") + "</span></a>"
         : next ? '<a class="card resume" href="#/learn/' + esc(next.topic.id) + '/overview"><span class="eyebrow">' + FN.icon("rocket") + " Start here</span><strong>" + esc(next.topic.title) + "</strong><small>" + esc(next.chapter.title) + '</small><span class="btn btn-primary">Begin ' + FN.icon("arrow-right") + "</span></a>" : "") +
-      '<div class="card stat"><span class="eyebrow">' + FN.icon("target") + ' Today’s goal</span><div class="ring" style="--p:' + gp + '"><span>' + todayMin + "<small>/" + goal + " min</small></span></div><button class=\"btn btn-soft\" id=\"dashTimer\">" + FN.icon("timer") + " Start a focus session</button></div>" +
+      '<div class="card stat"><span class="eyebrow">' + FN.icon("target") + ' Today’s goal</span><div class="ring" style="--p:' + gp + '"><span>' + todayMin + "<small>/" + goal + " min</small></span></div><button class=\"btn btn-soft\" id=\"dashTimer\">" + FN.icon("timer") + " Start a focus session</button><button class=\"btn btn-ghost\" id=\"dashEasy\">" + FN.icon("sprout") + " Pick an easy win</button></div>" +
       '<div class="card stat"><span class="eyebrow">' + FN.icon("zap") + " Level " + FN.store.level() + '</span><strong class="big">' + s.xp + ' XP</strong><div class="bar"><span style="width:' + (s.xp % 200) / 2 + '%"></span></div><small class="muted">' + (200 - s.xp % 200) + " XP to level " + (FN.store.level() + 1) + "</small></div>" +
       '<div class="card stat"><span class="eyebrow">' + FN.icon("layers") + ' Flashcards</span><strong class="big">' + due + '</strong><small class="muted">due for review</small><a class="btn btn-soft" href="#/flashcards">Review now</a></div>' +
       "</div>" +
@@ -166,6 +166,7 @@
       '<section class="card upload-cta"><div>' + FN.icon("file-up") + "<div><strong>Got the next chapter's slides?</strong><p class=\"muted small\">Add them as a new chapter of " + esc(c.title) + " — notes, flashcards and quizzes are built from their text.</p></div></div><a class=\"btn btn-primary\" href=\"#/chapters\">Add a chapter</a></section></div>";
     $("#dashTimer").onclick = FN.focus.openTimer;
     if ($("#dashQuick")) $("#dashQuick").onclick = FN.focus.quickStart;
+    $("#dashEasy").onclick = FN.focus.easyWin;
     FN.icons();
   }
 
@@ -374,6 +375,12 @@
     var days = []; for (var i = 27; i >= 0; i--) { var d = FN.store.today(new Date(Date.now() - i * 864e5)); days.push({ d: d, m: s.studyLog[d] || 0 }); }
     var activeDays = days.slice(-7).filter(function (x) { return x.m > 0; }).length;
     var weak = weakTopics(c), due = dueCards(c).length;
+    // Time guesses: last 10 focus-mode estimates vs real time.
+    var est = s.estimates.slice(-10), estMsg = "Guess the time when you open focus mode.";
+    if (est.length) {
+      var ratio = est.reduce(function (n, x) { return n + x.actual / x.est; }, 0) / est.length;
+      estMsg = ratio > 1.2 ? "Things usually take you about " + Math.round((ratio - 1) * 100) + "% longer than you guess — add a little extra time." : ratio < 0.8 ? "You usually finish faster than you guess." : "Your guesses are close — nice time sense!";
+    }
     var wk = s.checkins.filter(function (x) { return x.at > Date.now() - 7 * 864e5; }), onPct = wk.length ? Math.round(wk.filter(function (x) { return x.on; }).length / wk.length * 100) : null;
     V().innerHTML = head("Progress Tracker", "Progress here is based on what you can recall (quizzes, checks, cards) — not on time spent on a page.", "chart-no-axes-column") +
       '<div class="dash-grid">' +
@@ -381,7 +388,8 @@
       '<div class="card stat"><span class="eyebrow">Quiz accuracy</span><strong class="big">' + (hist.length ? avg + "%" : "—") + '</strong><small class="muted">' + hist.length + " quizzes</small></div>" +
       '<div class="card stat"><span class="eyebrow">Cards due</span><strong class="big">' + due + '</strong><a class="link small" href="#/flashcards">Review</a></div>' +
       '<div class="card stat"><span class="eyebrow">Consistency</span><strong class="big">' + activeDays + '/7</strong><small class="muted">days with a finished focus session</small></div>' +
-      '<div class="card stat"><span class="eyebrow">On track (check-ins)</span><strong class="big">' + (onPct === null ? "—" : onPct + "%") + '</strong><small class="muted">' + (wk.length ? wk.length + " check-ins this week. Noticing drift is progress too." : "Answer the halfway check-in during focus sessions.") + "</small></div></div>" +
+      '<div class="card stat"><span class="eyebrow">On track (check-ins)</span><strong class="big">' + (onPct === null ? "—" : onPct + "%") + '</strong><small class="muted">' + (wk.length ? wk.length + " check-ins this week. Noticing drift is progress too." : "Answer the halfway check-in during focus sessions.") + "</small></div>" +
+      '<div class="card stat"><span class="eyebrow">Time guesses</span><strong class="big">' + (est.length ? est[est.length - 1].est + "→" + est[est.length - 1].actual : "—") + '</strong><small class="muted">' + (est.length ? "last guess → real minutes. " : "") + estMsg + "</small></div></div>" +
       '<div class="grid-2"><section class="card"><h3>Quiz performance by topic</h3><div class="hbars">' + all.map(function (x) { var b = FN.store.topic(x.topic.id).quizBest || 0; return '<a class="hbar" href="#/learn/' + esc(x.topic.id) + '/quiz"><span class="lab">' + esc(x.topic.title) + '</span><span class="track"><span style="width:' + b + '%" class="' + (b >= 80 ? "good" : b >= 60 ? "ok" : b ? "low" : "") + '"></span></span><span class="val">' + (b ? b + "%" : "—") + "</span></a>"; }).join("") + "</div></section>" +
       '<section class="card"><h3>Learning consistency (last 4 weeks)</h3><div class="heat" role="img" aria-label="Focus minutes per day for the last 28 days">' + days.map(function (x) { var l = x.m === 0 ? 0 : x.m < 10 ? 1 : x.m < 25 ? 2 : 3; return '<span class="l' + l + '" title="' + x.d + ": " + x.m + ' min"></span>'; }).join("") + '</div><p class="muted small">Gaps are normal. ' + (s.streakEnabled ? "Streak tracking is on (Settings)." : "Streaks are off — turn them on in Settings if they motivate you.") + "</p>" +
       "<h3>Topics needing review</h3>" + (weak.length ? "<ul>" + weak.map(function (w) { return '<li><a href="#/learn/' + esc(w.topic.id) + '/notes">' + esc(w.topic.title) + "</a></li>"; }).join("") + "</ul>" : '<p class="muted">None right now.</p>') +
@@ -426,6 +434,8 @@
           '<button class="btn btn-primary">Save</button>' + (FN.chatbot && FN.chatbot.getKey() ? '<button type="button" class="btn btn-ghost danger" id="chatKeyRemove">Remove</button>' : "") + "</form>" +
           '<p class="small" id="chatKeyStatus">' + (FN.chatbot && FN.chatbot.getKey() ? FN.icon("circle-check") + " AI chatbot is on in this browser." : FN.icon("circle") + " AI chatbot is off \u2014 Ask FocusNest answers from the slides.") + "</p>") +
       "<h3>" + FN.icon("flame") + " Motivation</h3><label class=\"switch\"><input type=\"checkbox\" id=\"streakT\"" + (s.streakEnabled ? " checked" : "") + "> <span>Show daily streaks (optional, never punishes gaps)</span></label>" +
+      '<label class="switch"><input type="checkbox" id="celebT"' + (s.celebrate.on ? " checked" : "") + "> <span>Celebrate when I finish things (small confetti burst)</span></label>" +
+      '<label class="switch"><input type="checkbox" id="celebS"' + (s.celebrate.sound ? " checked" : "") + "> <span>Play a soft chime with celebrations</span></label>" +
             "<h3>" + FN.icon("database") + " Your data</h3><div class=\"row\"><button class=\"btn btn-ghost\" id=\"exportData\">" + FN.icon("download") + " Export progress (.json)</button><button class=\"btn btn-ghost danger\" id=\"resetData\">" + FN.icon("trash-2") + " Reset progress</button></div></section></div>" +
       // Credits: the free tools FocusNest uses for Read aloud (their licenses ask for attribution).
       '<section class="card credits"><h3>' + FN.icon("heart-handshake") + " Credits</h3>" +
@@ -482,6 +492,8 @@
       };
       var ckr = $("#chatKeyRemove"); if (ckr) ckr.onclick = function () { FN.chatbot.setKey(""); FN.toast("Chatbot key removed."); settings(); };
     }
+    $("#celebT").onchange = function () { var on = this.checked; FN.store.update(function (s) { s.celebrate.on = on; }); };
+    $("#celebS").onchange = function () { var on = this.checked; FN.store.update(function (s) { s.celebrate.sound = on; }); };
     $("#streakT").onchange = function () { var on = this.checked; FN.store.update(function (s) { s.streakEnabled = on; }); };
     $("#exportData").onclick = function () { var a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(FN.store.get(), null, 2)], { type: "application/json" })); a.download = "focusnest-progress.json"; a.click(); };
     $("#resetData").onclick = function () {

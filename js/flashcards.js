@@ -57,13 +57,14 @@
    */
   function review(el, list, o) {
     o = o || {};
-    var deck = o.shuffle ? FN.shuffle(list) : list.slice(), i = 0, flipped = false, rated = 0;
+    var deck = o.shuffle ? FN.shuffle(list) : list.slice(), i = 0, flipped = false, rated = 0, again = {};
     if (!deck.length) {
       el.innerHTML = '<div class="empty">' + FN.icon("party-popper") + "<p>" + esc(o.emptyText || "No cards in this selection right now.") + "</p></div>"; FN.icons(); return;
     }
     function draw() {
       if (i >= deck.length) {
-        el.innerHTML = '<div class="empty">' + FN.icon("sparkles") + "<p><strong>Session done — " + rated + " card" + (rated === 1 ? "" : "s") + " reviewed.</strong></p><p class=\"muted\">Cards you rated Hard come back in 10 minutes. Use “Only forgotten” to revisit them.</p><button class=\"btn btn-primary\" data-fc=\"again\">" + FN.icon("rotate-ccw") + " Review again</button></div>";
+        if (rated) FN.celebrate("Flashcard session done!", true);
+        el.innerHTML = '<div class="empty">' + FN.icon("sparkles") + "<p><strong>Session done — " + rated + " card" + (rated === 1 ? "" : "s") + " reviewed.</strong></p><p class=\"muted\">Hard cards came back in this session until you remembered them, and they return again in a few days.</p><button class=\"btn btn-primary\" data-fc=\"again\">" + FN.icon("rotate-ccw") + " Review again</button></div>";
         FN.icons(); return;
       }
       var x = deck[i], st = FN.store.get().cards[x.card.id] || {};
@@ -82,12 +83,14 @@
       if (b.dataset.fc === "flip") { flipped = !flipped; b.classList.toggle("is-flipped", flipped); el.querySelector(".rate").hidden = !flipped; }
       // Star button: toggles "saved for revision"
       if (b.dataset.fc === "save") { FN.store.update(function (s) { var c = s.cards[x.card.id] = s.cards[x.card.id] || {}; c.saved = !c.saved; }); draw(); }
-      if (b.dataset.fc === "again") { i = 0; rated = 0; flipped = false; draw(); }
+      if (b.dataset.fc === "again") { i = 0; rated = 0; again = {}; flipped = false; draw(); }
       // Rating buttons → schedule() and move to the next card.
       if (b.dataset.rate) {
         FN.store.update(function (s) { s.cards[x.card.id] = Object.assign(schedule(s.cards[x.card.id], b.dataset.rate), { saved: (s.cards[x.card.id] || {}).saved }); });
         FN.store.addXP(FN.store.XP.card);
         rated++;
+        // Practise until right: a "Hard" card comes back 3 cards later in this same session (up to 3 times).
+        if (b.dataset.rate === "hard" && (again[x.card.id] = (again[x.card.id] || 0) + 1) <= 3) deck.splice(Math.min(deck.length, i + 4), 0, x);
         var reviews = Object.keys(FN.store.get().cards).reduce(function (n, k) { return n + (FN.store.get().cards[k].reps || 0); }, 0);
         if (reviews >= 50) FN.store.award("card-shark");
         i++; flipped = false; draw();

@@ -91,6 +91,33 @@
   };
   FN.reducedMotion = function () { return document.documentElement.hasAttribute("data-reduce-motion"); };
 
+  /**
+   * FUNCTION: FN.celebrate(message, big)
+   * PURPOSE: an immediate, small reward after finishing something (ADHD brains respond
+   *   best to frequent, instant rewards — see ADHD_RESEARCH.md).
+   *   Shows a short burst of dots + a soft two-note chime. With "Reduce motion" on,
+   *   only the message is shown. Both can be turned off in Settings → Motivation.
+   */
+  FN.celebrate = function (msg, big) {
+    var c = (FN.store.get().celebrate) || { on: true, sound: true };
+    if (msg) FN.toast(msg, "xp");
+    if (!c.on) return;
+    if (c.sound) try {
+      var a = new (window.AudioContext || window.webkitAudioContext)();
+      [523, 784].forEach(function (f, k) { var o = a.createOscillator(), g = a.createGain(); o.frequency.value = f; g.gain.setValueAtTime(0.04, a.currentTime + k * 0.12); g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + k * 0.12 + 0.3); o.connect(g); g.connect(a.destination); o.start(a.currentTime + k * 0.12); o.stop(a.currentTime + k * 0.12 + 0.32); });
+    } catch (e) {}
+    if (FN.reducedMotion()) return;
+    var box = document.createElement("div"), n = big ? 28 : 14, colors = ["#6f9a7e", "#e0a84a", "#5b8bd0", "#d8735f", "#9b7fd1"];
+    box.className = "confetti"; box.setAttribute("aria-hidden", "true");
+    for (var k = 0; k < n; k++) {
+      var d = document.createElement("i"), ang = (k / n) * Math.PI * 2, dist = (big ? 160 : 90) + Math.random() * 60;
+      d.style.cssText = "--x:" + Math.cos(ang) * dist + "px;--y:" + Math.sin(ang) * dist + "px;background:" + colors[k % colors.length];
+      box.appendChild(d);
+    }
+    document.body.appendChild(box);
+    setTimeout(function () { box.remove(); }, 1100);
+  };
+
   /* ---------------- READ ALOUD (text-to-speech) ----------------
      Goal: sound like a calm person reading, not a robot.
        1. Pick the most natural voice the device has (Premium / Enhanced /

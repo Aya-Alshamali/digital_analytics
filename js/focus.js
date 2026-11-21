@@ -13,6 +13,9 @@
        - If-then plan picked before a session (implementation intentions).
        - Gentle halfway check-in "Still on track?" (self-monitoring), logged
          locally and shown on the Progress page.
+       - Time guess before focus mode vs. real time after (time estimation practice).
+       - Easy win picker: suggests the shortest unfinished blocks (or a surprise).
+       - Study with me: a calm "studying alongside you" companion (body doubling).
    DEPENDENCIES: js/ui.js, js/store.js.
    ===================================================================== */
 (function () {
@@ -36,9 +39,19 @@
       return { note: n, takeaway: (n.exam && n.exam[0]) || n.simple, q: q, card: card, index: k };
     });
     if (!blocks.length) { FN.toast("This topic has no note blocks yet."); return; }
-    var i = Math.max(0, Math.min(startAt || 0, blocks.length - 1)), answered = false, doneSet = {};
+    var i = Math.max(0, Math.min(startAt || 0, blocks.length - 1)), answered = false, doneSet = {}, guess = null, began = Date.now();
     document.body.classList.add("in-focus");
     layer.hidden = false;
+    // Time estimate: guess how long the remaining blocks take; compared with real time at the end.
+    function askGuess() {
+      var todo = blocks.length - i;
+      layer.innerHTML = '<div class="focus-wrap"><div class="focus-top"><span class="muted">' + esc(topic.title) + '</span><button class="btn btn-ghost" data-f="close">' + FN.icon("minimize-2") + ' Exit focus</button></div>' +
+        '<article class="focus-card guess-card"><h2>' + FN.icon("hourglass") + " How long do you think this will take?</h2>" +
+        '<p class="muted">' + todo + " block" + (todo === 1 ? "" : "s") + ". Guessing first, then seeing the real time, trains your sense of time.</p>" +
+        '<div class="opts-row">' + [5, 10, 15, 20, 30, 45].map(function (m) { return '<button class="opt" data-guess="' + m + '">' + m + " min</button>"; }).join("") + "</div>" +
+        '<div class="row focus-next"><button class="btn btn-ghost" data-guess="0">Skip</button></div></article></div>';
+      FN.icons();
+    }
     function draw() {
       var b = blocks[i], n = b.note, mins = Math.max(2, Math.min(5, Math.round((n.simple + " " + (n.deep || "")).split(/\s+/).length / 120) + 2));
       answered = false;
@@ -67,6 +80,8 @@
     function keys(e) { if (e.key === "Escape" && !layer.hidden) close(); }
     document.addEventListener("keydown", keys);
     layer.onclick = function (e) {
+      var g = e.target.closest("[data-guess]");
+      if (g) { guess = +g.dataset.guess || null; began = Date.now(); return draw(); }
       var b = e.target.closest("[data-f],[data-ans],[data-reveal]"); if (!b) return;
       var blk = blocks[i], fb = layer.querySelector(".feedback");
       if (b.hasAttribute("data-reveal")) { fb.className = "feedback ok"; fb.textContent = blk.card.back; answered = true; return; }
@@ -84,12 +99,86 @@
           doneSet[i] = true;
           FN.store.update(function (s) { FN.store.topic(topic.id).sections[blk.note.id] = true; });
           FN.store.addXP(FN.store.XP.micro, "block done");
+          if (i < blocks.length - 1) FN.celebrate();
         }
         if (i < blocks.length - 1) { i++; draw(); }
-        else { close(); FN.toast("Focus session complete — " + blocks.length + " blocks."); if (FN.onFocusDone) FN.onFocusDone(); }
+        else {
+          close();
+          var actual = Math.max(1, Math.round((Date.now() - began) / 60e3));
+          if (guess) {
+            FN.store.update(function (s) { s.estimates.push({ topic: topic.id, est: guess, actual: actual, at: Date.now() }); if (s.estimates.length > 100) s.estimates.shift(); });
+            FN.celebrate("Done! You guessed " + guess + " min — it took " + actual + " min. " + (Math.abs(actual - guess) <= Math.max(2, guess * 0.2) ? "Great estimate!" : "Good to know for next time."), true);
+          } else FN.celebrate("Focus session complete — " + blocks.length + " blocks.", true);
+          if (FN.onFocusDone) FN.onFocusDone();
+        }
       }
     };
-    draw();
+    if (blocks.length - i > 1) askGuess(); else draw();
+  }
+
+  /**
+   * FUNCTION: easyWin()
+   * PURPOSE: helps with getting started — lists the 3 shortest unfinished blocks
+   *   in the chapter being studied, plus a "Surprise me" pick. Opens it in focus mode.
+   */
+  function easyWin() {
+    var ch = FN.courses.activeChapter(), list = [];
+    FN.courses.topics().forEach(function (x) {
+      if (ch && x.chapter !== ch) return;
+      var done = FN.store.topic(x.topic.id).sections;
+      (x.topic.notes || []).forEach(function (n, k) {
+        if (!done[n.id]) list.push({ topic: x.topic, k: k, n: n, words: (n.simple + " " + (n.deep || "")).split(/\s+/).length });
+      });
+    });
+    if (!list.length) { FN.toast("Everything in this chapter is done — amazing!"); return; }
+    var easy = list.slice().sort(function (a, b) { return a.words - b.words; }).slice(0, 3), pick = list[Math.floor(Math.random() * list.length)];
+    function item(w, label) { return '<button class="rec" data-win="' + list.indexOf(w) + '"><strong>' + (label ? label + ": " : "") + esc(w.n.heading) + "</strong><small>" + esc(w.topic.title) + " · about " + Math.max(2, Math.min(5, Math.round(w.words / 120) + 2)) + " min</small></button>"; }
+    FN.modal('<div class="easy-win"><h3>' + FN.icon("sprout") + ' Pick an easy win</h3><p class="muted">Starting small is still starting. Pick one that looks short or interesting.</p>' +
+      easy.map(function (w) { return item(w); }).join("") + "<h4>" + FN.icon("shuffle") + " Or try something different</h4>" + item(pick, "Surprise") + "</div>", function (m) {
+      m.onclick = function (e) { var b = e.target.closest("[data-win]"); if (!b) return; var w = list[+b.dataset.win]; FN.closeModal(); open(w.topic, w.k); };
+    });
+  }
+
+  /* ================= STUDY WITH ME (body doubling) ================= */
+  // A calm companion card: "studying with you", elapsed time, gentle messages and an
+  // optional soft background noise made in the browser (no audio files, nothing sent).
+  var buddy = null;
+  var BUDDY_LINES = ["I'm here studying too. One small step at a time.", "Still with you. Keep going.", "Drifted? That's normal — just come back to the next line.", "You're doing the work. That's what counts.", "Halfway through something is still progress."];
+  function noise(kind) {
+    if (buddy.audio) { try { buddy.audio.close(); } catch (e) {} buddy.audio = null; }
+    if (!kind) return;
+    try {
+      var a = new (window.AudioContext || window.webkitAudioContext)(), len = a.sampleRate * 2, buf = a.createBuffer(1, len, a.sampleRate), d = buf.getChannelData(0), last = 0;
+      for (var k = 0; k < len; k++) { var w = Math.random() * 2 - 1; last = (last + 0.02 * w) / 1.02; d[k] = kind === "brown" ? last * 3.5 : w * 0.25; }
+      var src = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
+      src.buffer = buf; src.loop = true; f.type = "lowpass"; f.frequency.value = kind === "brown" ? 500 : 1200; g.gain.value = 0.12;
+      src.connect(f); f.connect(g); g.connect(a.destination); src.start(); buddy.audio = a;
+    } catch (e) { FN.toast("Background sound isn't available in this browser."); }
+  }
+  function studyWithMe() {
+    if (buddy) return stopBuddy();
+    buddy = { start: Date.now(), line: 0, audio: null, el: document.createElement("div") };
+    var el = buddy.el; el.className = "buddy"; el.setAttribute("role", "status");
+    el.innerHTML = '<div class="buddy-head"><span class="buddy-avatar" aria-hidden="true"></span><div><strong>Studying with you</strong><small class="buddy-time">0 min together</small></div>' +
+      '<button class="icon-btn" data-bd="close" aria-label="Stop study with me">' + FN.icon("x") + "</button></div>" +
+      '<p class="buddy-line">' + BUDDY_LINES[0] + "</p>" +
+      '<label class="small">Background sound <select data-bd="sound"><option value="">Off</option><option value="brown">Soft brown noise</option><option value="rain">Gentle rain-like noise</option></select></label>';
+    document.body.appendChild(el); FN.icons();
+    el.onclick = function (e) { if (e.target.closest('[data-bd="close"]')) stopBuddy(); };
+    el.onchange = function (e) { if (e.target.dataset.bd === "sound") noise(e.target.value); };
+    buddy.tick = setInterval(function () {
+      var m = Math.floor((Date.now() - buddy.start) / 60e3);
+      el.querySelector(".buddy-time").textContent = m + " min together";
+      if (m && m % 4 === 0 && m !== buddy.shown) { buddy.shown = m; buddy.line = (buddy.line + 1) % BUDDY_LINES.length; el.querySelector(".buddy-line").textContent = BUDDY_LINES[buddy.line]; }
+    }, 15000);
+    var b = document.getElementById("buddyBtn"); if (b) b.setAttribute("aria-pressed", "true");
+  }
+  function stopBuddy() {
+    if (!buddy) return;
+    var m = Math.floor((Date.now() - buddy.start) / 60e3);
+    noise(null); clearInterval(buddy.tick); buddy.el.remove(); buddy = null;
+    var b = document.getElementById("buddyBtn"); if (b) b.setAttribute("aria-pressed", "false");
+    if (m >= 5) FN.celebrate("You studied together for " + m + " minutes!");
   }
 
   /* ================= 2. POMODORO TIMER ================= */
@@ -181,7 +270,7 @@
     var cfg = FN.store.get().timer;
     try { var a = new (window.AudioContext || window.webkitAudioContext)(), o = a.createOscillator(), g = a.createGain(); o.frequency.value = 660; g.gain.value = 0.05; o.connect(g); g.connect(a.destination); o.start(); o.stop(a.currentTime + 0.35); } catch (e) {}
     if (T.phase === "focus") {
-      FN.store.logStudy(T.mins || cfg.focus); FN.store.addXP(FN.store.XP.focus, "focus session"); FN.store.award("focus-finisher");
+      FN.store.logStudy(T.mins || cfg.focus); FN.store.addXP(FN.store.XP.focus, "focus session"); FN.store.award("focus-finisher"); FN.celebrate(null, true);
       T.phase = "idle"; renderTimerChip();
       brainBreak(true);
     } else { T.phase = "idle"; renderTimerChip(); FN.toast("Break over — ready when you are."); }
@@ -279,5 +368,5 @@
     });
   }
 
-  FN.focus = { open: open, openTimer: openTimer, quickStart: function () { startTimer("focus", 2); FN.toast("2 minutes. Just start — you can stop after."); }, checkIn: checkIn, renderTimerChip: renderTimerChip, brainBreak: brainBreak, openParkingLot: openParkingLot, timerState: function () { return T; } };
+  FN.focus = { open: open, openTimer: openTimer, easyWin: easyWin, studyWithMe: studyWithMe, quickStart: function () { startTimer("focus", 2); FN.toast("2 minutes. Just start — you can stop after."); }, checkIn: checkIn, renderTimerChip: renderTimerChip, brainBreak: brainBreak, openParkingLot: openParkingLot, timerState: function () { return T; } };
 })();

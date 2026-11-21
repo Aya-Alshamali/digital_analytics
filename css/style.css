@@ -509,3 +509,16 @@ body.in-focus .app { visibility: hidden; }
 .checkin { position: fixed; right: 18px; bottom: 18px; z-index: 60; max-width: 330px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; box-shadow: 0 12px 34px rgba(0,0,0,.16); }
 .checkin p { margin: 6px 0 10px; }
 .welcome-back { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; background: var(--sage-50); margin-bottom: 16px; } .welcome-back > div { flex: 1; min-width: 200px; } .welcome-back p { margin: 2px 0 0; }
+/* Celebrations, easy win, time guess, study with me (ADHD_RESEARCH.md) */
+.confetti { position: fixed; left: 50%; top: 42%; z-index: 90; pointer-events: none; }
+.confetti i { position: absolute; width: 9px; height: 9px; border-radius: 3px; animation: burst 1s cubic-bezier(.2,.7,.3,1) forwards; }
+@keyframes burst { from { transform: translate(0,0) scale(1); opacity: 1; } to { transform: translate(var(--x), var(--y)) scale(.6) rotate(200deg); opacity: 0; } }
+.easy-win .rec { display: block; width: 100%; text-align: left; margin-bottom: 8px; cursor: pointer; font: inherit; }
+.guess-card .opts-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+.buddy { position: fixed; left: 18px; bottom: 18px; z-index: 55; width: 290px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px; box-shadow: 0 12px 34px rgba(0,0,0,.14); }
+.buddy-head { display: flex; align-items: center; gap: 10px; } .buddy-head > div { flex: 1; display: grid; } .buddy-head small { color: var(--ink-2); }
+.buddy-avatar { width: 34px; height: 34px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #9cc4a8, var(--accent)); animation: breathe 6s ease-in-out infinite; flex: none; }
+@keyframes breathe { 50% { transform: scale(1.18); } }
+[data-reduce-motion] .buddy-avatar { animation: none; }
+.buddy-line { margin: 10px 0; } .buddy label { display: grid; gap: 4px; }
+#buddyBtn[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }

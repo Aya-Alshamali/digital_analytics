@@ -91,6 +91,12 @@ Every interactive control and what it does. The site records nothing about who v
 | Gentle check-in halfway (timer panel) | Turns the halfway check-in on or off |
 | Check-in: Yes, on track / I drifted | Saves the answer locally; Progress shows the on-track % |
 | Dashboard: Start with 2 minutes | Shown after 3+ days away; starts a 2-minute session |
+| Focus mode: time guess (5–45 min / Skip) | Guess first; at the end you see guess vs real time |
+| Dashboard: Pick an easy win | Lists the 3 shortest unfinished blocks and a Surprise pick, then opens one in focus mode |
+| Quiz summary: Practise the missed until right | Repeats only the missed questions until all are correct (not saved as a new score) |
+| Flashcards: Hard | The card comes back 3 cards later in the same session (up to 3 times) |
+| Top bar: Study with me (people icon) | Opens a calm study companion with optional soft background noise; click again to stop |
+| Settings → Motivation: Celebrate / chime | Turns the small celebration burst and chime on or off |
 
 ## Pages
 

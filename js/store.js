@@ -35,6 +35,8 @@
     ifThen: "",                  // the student's if-then plan for focus sessions ("" = none)
     checkinOn: true,             // gentle "still on track?" check-in halfway through a focus session
     checkins: [],                // [{ at, on }] — answers to the check-in (on = true if on track)
+    estimates: [],               // [{ topic, est, actual, at }] — time guesses vs real time (focus mode)
+    celebrate: { on: true, sound: true },   // small celebration after finishing things
     settings: { fontSize: 17, lineHeight: 1.7, width: 72, contrast: "normal", bg: "paper", theme: "light", reduceMotion: false, ttsRate: 0.95, voice: null, voiceEngine: "natural", naturalVoice: "af_heart", naturalQuality: "auto", navCollapsed: false, outlineHidden: false }
   };
 
