@@ -524,3 +524,10 @@ body.in-focus .app { visibility: hidden; }
 [data-reduce-motion] .buddy-avatar { animation: none; }
 .buddy-line { margin: 10px 0; } .buddy label { display: grid; gap: 4px; }
 #buddyBtn[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+/* Slide panel: a big slide scrolls inside the panel; navigation always stays visible */
+.lesson-side.slides-mode { display: flex; flex-direction: column; overflow: hidden; max-height: calc(100vh - 140px); }
+.lesson-side.slides-mode .slide-view { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-right: 4px; }
+.lesson-side.slides-mode .side-head, .lesson-side.slides-mode .slide-nav, .lesson-side.slides-mode .thumbs { flex: none; }
+.lesson-side.slides-mode .slide-nav { padding-top: 8px; border-top: 1px solid var(--line); margin-top: 6px; }
+.lesson-side.slides-mode .thumbs { max-height: 76px; overflow-y: auto; }
+@media (max-width: 1560px) { .lesson-side.slides-mode { max-height: calc(100vh - 80px); max-height: calc(100dvh - 80px); } }   /* drawer: an animated parent breaks top/bottom sizing, so cap it explicitly */

@@ -251,6 +251,7 @@
     var el = document.getElementById("lessonSide"); if (!el) return;
     if (side === "mynotes") {
       var txt = FN.store.get().notes[cur.topic.id] || "", hl = FN.store.get().highlights[cur.topic.id] || [];
+      el.classList.remove("slides-mode");
       el.innerHTML = '<div class="side-head"><h3>' + FN.icon("pencil-line") + ' My notes</h3><button class="icon-btn" data-l="closeside" aria-label="Close">' + FN.icon("x") + "</button></div>" +
         '<textarea class="my-notes" placeholder="Write in your own words… (saved automatically on this device)">' + esc(txt) + '</textarea><p class="muted small save-state">Saved on this device.</p>' +
         '<h4>' + FN.icon("highlighter") + " Highlights</h4>" + (hl.length ? '<ul class="hl-list">' + hl.map(function (h, k) { return "<li><mark>" + esc(h) + '</mark><button class="icon-btn" data-unhl="' + k + '" aria-label="Remove highlight">' + FN.icon("x") + "</button></li>"; }).join("") + "</ul>" : '<p class="muted small">Select text in the lesson and press “Highlight”.</p>');
@@ -266,6 +267,8 @@
     if (!s) { el.innerHTML = '<p class="muted">No slides stored for this course.</p>'; return; }
     slideAt = s.n;
     var k = mine.indexOf(s);
+    // slides-mode: title, Back/Next and slide numbers stay put; only the slide itself scrolls (big slides).
+    el.classList.add("slides-mode");
     el.innerHTML = '<div class="side-head"><h3>' + FN.icon("presentation") + " Slide " + s.n + '</h3><button class="icon-btn" data-l="closeside" aria-label="Close">' + FN.icon("x") + "</button></div>" +
       '<div class="slide-view"><p class="slide-deck muted small">' + esc(deck.name) + "</p><h4>" + esc(s.title) + "</h4>" +
       (s.images || []).map(function (src) { return '<img src="' + esc(src) + '" alt="Picture from slide ' + s.n + '" loading="lazy">'; }).join("") +
