@@ -96,7 +96,7 @@
      "unlock" it on the student's first click or key press; later sounds (e.g.
      the timer ending while you read) can then play.
        FN.sound.chime(kind)   "small" | "big" | "timer" — soft bell tones
-       FN.sound.noise(kind, volume) "brown" | "rain" — returns { stop(), volume(v) }
+       FN.sound.noise(kind, volume) "brown" | "rain" | "ocean" — returns { stop(), volume(v) }
      ===================================================================== */
   var actx = null;
   function audio() {
@@ -131,35 +131,71 @@
     c.notes.forEach(function (f, k) { bell(a, f, t + k * c.gap, c.len, c.vol); });
   }
 
-  // Background noise: 6 s of noise whose end is cross-faded into its start, so the loop has no click.
-  function noise(kind, vol) {
-    var a = audio(); if (!a) return null;
-    var sr = a.sampleRate, len = sr * 6, fade = sr * 0.5, raw = new Float32Array(len + fade), b0 = 0, b1 = 0, b2 = 0, last = 0;
-    for (var k = 0; k < raw.length; k++) {
+  /**
+   * makeAmbience(ctx, kind): fills a looping buffer with a natural-sounding background.
+   *   "brown" — deep, even rumble (like a fan far away)
+   *   "rain"  — soft pink-noise bed + hundreds of random droplets
+   *   "ocean" — slow waves that swell and fall every ~8 seconds
+   * The buffer's end is cross-faded into its start, so the loop has no click.
+   */
+  function makeAmbience(a, kind) {
+    var sr = a.sampleRate, secs = kind === "ocean" ? 16 : 10, len = sr * secs, fade = Math.floor(sr * 0.6);
+    var raw = new Float32Array(len + fade), b0 = 0, b1 = 0, b2 = 0, br = 0, lp = 0, k;
+    for (k = 0; k < raw.length; k++) {
       var w = Math.random() * 2 - 1;
-      if (kind === "brown") { last = (last + 0.02 * w) / 1.02; raw[k] = last * 3.2; }
-      else { b0 = 0.99765 * b0 + w * 0.099; b1 = 0.963 * b1 + w * 0.2965; b2 = 0.57 * b2 + w * 1.0527; raw[k] = (b0 + b1 + b2 + w * 0.1848) * 0.12; }   // pink noise
+      br = (br + 0.02 * w) / 1.02;                                              // brown noise
+      b0 = 0.99765 * b0 + w * 0.099; b1 = 0.963 * b1 + w * 0.2965; b2 = 0.57 * b2 + w * 1.0527;
+      var pink = (b0 + b1 + b2 + w * 0.1848) * 0.11;                           // pink noise
+      if (kind === "brown") raw[k] = br * 3.2;
+      else if (kind === "rain") { lp += 0.25 * (pink - lp); raw[k] = lp * 1.7; }   // softened bed
+      else {
+        var t = (k % len) / sr, env = 0.18 + 0.82 * Math.pow(Math.sin(Math.PI * t / 8), 2);   // one wave every 8 s
+        lp += (0.04 + 0.3 * env) * (pink - lp);                                 // brighter as the wave breaks
+        raw[k] = (lp * 1.6 * env + br * 1.2) * 0.8;
+      }
+    }
+    if (kind === "rain") {   // droplets: short, bright, randomly loud ticks
+      for (var n = 0; n < secs * 140; n++) {
+        var at = Math.floor(Math.random() * len), amp = 0.06 + Math.pow(Math.random(), 3) * 0.5, dl = Math.floor(sr * (0.004 + Math.random() * 0.012)), prev = 0;
+        for (var j = 0; j < dl && at + j < raw.length; j++) { var x = (Math.random() * 2 - 1) - prev * 0.6; prev = x; raw[at + j] += x * amp * Math.exp(-j / (dl / 4)); }
+      }
     }
     var buf = a.createBuffer(1, len, sr), d = buf.getChannelData(0);
     for (k = 0; k < len; k++) d[k] = raw[k];
-    for (k = 0; k < fade; k++) { var x = k / fade; d[k] = raw[k] * Math.sqrt(x) + raw[len + k] * Math.sqrt(1 - x); }
-    var src = a.createBufferSource(), lp = a.createBiquadFilter(), hp = a.createBiquadFilter(), g = a.createGain(), out = a.createGain();
-    src.buffer = buf; src.loop = true;
-    hp.type = "highpass"; hp.frequency.value = kind === "brown" ? 30 : 300;
-    lp.type = "lowpass"; lp.frequency.value = kind === "brown" ? 450 : 5000;
-    src.connect(hp); hp.connect(lp); lp.connect(g); g.connect(out); out.connect(a.destination);
-    if (kind === "rain") {   // slow random swells so rain sounds alive, not like static
-      var lfo = a.createOscillator(), depth = a.createGain(); lfo.frequency.value = 0.13; depth.gain.value = 0.25; lfo.connect(depth); depth.connect(g.gain); lfo.start();
-    }
-    g.gain.value = 0.75;
-    out.gain.setValueAtTime(0.0001, a.currentTime); out.gain.exponentialRampToValueAtTime(vol || 0.15, a.currentTime + 1.2);   // fade in
+    for (k = 0; k < fade; k++) { var f = k / fade; d[k] = raw[k] * Math.sqrt(f) + raw[len + k] * Math.sqrt(1 - f); }
+    for (k = 0; k < len; k++) d[k] = Math.max(-0.98, Math.min(0.98, d[k]));
+    return buf;
+  }
+  // Plays an ambience through a gentle filter chain; dest lets tests render it offline.
+  function ambience(a, kind, vol, dest) {
+    var src = a.createBufferSource(), hp = a.createBiquadFilter(), lpf = a.createBiquadFilter(), out = a.createGain();
+    src.buffer = makeAmbience(a, kind); src.loop = true;
+    hp.type = "highpass"; hp.frequency.value = kind === "rain" ? 120 : 25;
+    lpf.type = "lowpass"; lpf.frequency.value = kind === "brown" ? 500 : kind === "rain" ? 7000 : 2500;
+    src.connect(hp); hp.connect(lpf); lpf.connect(out); out.connect(dest || a.destination);
+    out.gain.setValueAtTime(0.0001, a.currentTime); out.gain.exponentialRampToValueAtTime(vol || 0.2, a.currentTime + 1.2);   // fade in
     src.start();
+    return { src: src, out: out };
+  }
+  function noise(kind, vol) {
+    var a = audio(); if (!a) return null;
+    var n = ambience(a, kind, vol);
     return {
-      volume: function (v) { out.gain.setTargetAtTime(Math.max(0.0001, v), a.currentTime, 0.1); },
-      stop: function () { out.gain.setTargetAtTime(0.0001, a.currentTime, 0.25); setTimeout(function () { try { src.stop(); if (lfo) lfo.stop(); } catch (e) {} out.disconnect(); }, 1200); }
+      volume: function (v) { n.out.gain.setTargetAtTime(Math.max(0.0001, v), a.currentTime, 0.1); },
+      stop: function () { n.out.gain.setTargetAtTime(0.0001, a.currentTime, 0.25); setTimeout(function () { try { n.src.stop(); } catch (e) {} n.out.disconnect(); }, 1200); }
     };
   }
-  FN.sound = { chime: chime, noise: noise };
+  /** FN.sound.test(kind): renders 4 s offline and reports loudness — used to check sounds without speakers. */
+  function test(kind) {
+    var OC = window.OfflineAudioContext || window.webkitOfflineAudioContext, o = new OC(1, 44100 * 4, 44100);
+    ambience(o, kind, 0.2);
+    return o.startRendering().then(function (b) {
+      var d = b.getChannelData(0), peak = 0, sum = 0, nan = 0;
+      for (var k = 44100 * 2; k < d.length; k++) { if (isNaN(d[k])) nan++; peak = Math.max(peak, Math.abs(d[k])); sum += d[k] * d[k]; }
+      return { kind: kind, peak: +peak.toFixed(3), rms: +Math.sqrt(sum / (d.length - 88200)).toFixed(3), nan: nan };
+    });
+  }
+  FN.sound = { chime: chime, noise: noise, test: test };
 
   FN.reducedMotion = function () { return document.documentElement.hasAttribute("data-reduce-motion"); };
 
