@@ -89,6 +89,78 @@
     var app = document.getElementById("app");
     if (app && FN.applyPanels) FN.applyPanels();
   };
+  /* =====================================================================
+     FN.sound — all of FocusNest's little sounds, made in the browser (no files).
+     WHY ONE SHARED AUDIO ENGINE: browsers allow only a few AudioContexts and
+     block sound that wasn't started by a click. So we create ONE context and
+     "unlock" it on the student's first click or key press; later sounds (e.g.
+     the timer ending while you read) can then play.
+       FN.sound.chime(kind)   "small" | "big" | "timer" — soft bell tones
+       FN.sound.noise(kind, volume) "brown" | "rain" — returns { stop(), volume(v) }
+     ===================================================================== */
+  var actx = null;
+  function audio() {
+    var AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null;
+    if (!actx) actx = new AC();
+    if (actx.state === "suspended") actx.resume();
+    return actx;
+  }
+  function unlock() { audio(); document.removeEventListener("pointerdown", unlock, true); document.removeEventListener("keydown", unlock, true); }
+  document.addEventListener("pointerdown", unlock, true);
+  document.addEventListener("keydown", unlock, true);
+
+  // One soft bell note: a sine plus a quiet octave, fast fade-in (no click) and a gentle fade-out.
+  function bell(a, freq, at, len, vol) {
+    [[1, 1], [2, 0.25], [3, 0.08]].forEach(function (h) {
+      var o = a.createOscillator(), g = a.createGain();
+      o.type = "sine"; o.frequency.value = freq * h[0];
+      g.gain.setValueAtTime(0.0001, at);
+      g.gain.exponentialRampToValueAtTime(vol * h[1], at + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, at + len);
+      o.connect(g); g.connect(a.destination); o.start(at); o.stop(at + len + 0.05);
+    });
+  }
+  var CHIMES = {
+    small: { notes: [659.25, 987.77], gap: 0.09, len: 0.7, vol: 0.05 },                // E5 → B5
+    big: { notes: [523.25, 659.25, 783.99, 1046.5], gap: 0.1, len: 1.1, vol: 0.05 },  // C major arpeggio
+    timer: { notes: [783.99, 659.25, 523.25], gap: 0.35, len: 1.6, vol: 0.07 }         // calm falling bells
+  };
+  function chime(kind) {
+    var a = audio(), c = CHIMES[kind] || CHIMES.small; if (!a) return;
+    var t = a.currentTime + 0.02;
+    c.notes.forEach(function (f, k) { bell(a, f, t + k * c.gap, c.len, c.vol); });
+  }
+
+  // Background noise: 6 s of noise whose end is cross-faded into its start, so the loop has no click.
+  function noise(kind, vol) {
+    var a = audio(); if (!a) return null;
+    var sr = a.sampleRate, len = sr * 6, fade = sr * 0.5, raw = new Float32Array(len + fade), b0 = 0, b1 = 0, b2 = 0, last = 0;
+    for (var k = 0; k < raw.length; k++) {
+      var w = Math.random() * 2 - 1;
+      if (kind === "brown") { last = (last + 0.02 * w) / 1.02; raw[k] = last * 3.2; }
+      else { b0 = 0.99765 * b0 + w * 0.099; b1 = 0.963 * b1 + w * 0.2965; b2 = 0.57 * b2 + w * 1.0527; raw[k] = (b0 + b1 + b2 + w * 0.1848) * 0.12; }   // pink noise
+    }
+    var buf = a.createBuffer(1, len, sr), d = buf.getChannelData(0);
+    for (k = 0; k < len; k++) d[k] = raw[k];
+    for (k = 0; k < fade; k++) { var x = k / fade; d[k] = raw[k] * Math.sqrt(x) + raw[len + k] * Math.sqrt(1 - x); }
+    var src = a.createBufferSource(), lp = a.createBiquadFilter(), hp = a.createBiquadFilter(), g = a.createGain(), out = a.createGain();
+    src.buffer = buf; src.loop = true;
+    hp.type = "highpass"; hp.frequency.value = kind === "brown" ? 30 : 300;
+    lp.type = "lowpass"; lp.frequency.value = kind === "brown" ? 450 : 5000;
+    src.connect(hp); hp.connect(lp); lp.connect(g); g.connect(out); out.connect(a.destination);
+    if (kind === "rain") {   // slow random swells so rain sounds alive, not like static
+      var lfo = a.createOscillator(), depth = a.createGain(); lfo.frequency.value = 0.13; depth.gain.value = 0.25; lfo.connect(depth); depth.connect(g.gain); lfo.start();
+    }
+    g.gain.value = 0.75;
+    out.gain.setValueAtTime(0.0001, a.currentTime); out.gain.exponentialRampToValueAtTime(vol || 0.15, a.currentTime + 1.2);   // fade in
+    src.start();
+    return {
+      volume: function (v) { out.gain.setTargetAtTime(Math.max(0.0001, v), a.currentTime, 0.1); },
+      stop: function () { out.gain.setTargetAtTime(0.0001, a.currentTime, 0.25); setTimeout(function () { try { src.stop(); if (lfo) lfo.stop(); } catch (e) {} out.disconnect(); }, 1200); }
+    };
+  }
+  FN.sound = { chime: chime, noise: noise };
+
   FN.reducedMotion = function () { return document.documentElement.hasAttribute("data-reduce-motion"); };
 
   /**
@@ -98,14 +170,11 @@
    *   Shows a short burst of dots + a soft two-note chime. With "Reduce motion" on,
    *   only the message is shown. Both can be turned off in Settings → Motivation.
    */
-  FN.celebrate = function (msg, big) {
+  FN.celebrate = function (msg, big, silent) {
     var c = (FN.store.get().celebrate) || { on: true, sound: true };
     if (msg) FN.toast(msg, "xp");
     if (!c.on) return;
-    if (c.sound) try {
-      var a = new (window.AudioContext || window.webkitAudioContext)();
-      [523, 784].forEach(function (f, k) { var o = a.createOscillator(), g = a.createGain(); o.frequency.value = f; g.gain.setValueAtTime(0.04, a.currentTime + k * 0.12); g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + k * 0.12 + 0.3); o.connect(g); g.connect(a.destination); o.start(a.currentTime + k * 0.12); o.stop(a.currentTime + k * 0.12 + 0.32); });
-    } catch (e) {}
+    if (c.sound && !silent) FN.sound.chime(big ? "big" : "small");
     if (FN.reducedMotion()) return;
     var box = document.createElement("div"), n = big ? 28 : 14, colors = ["#6f9a7e", "#e0a84a", "#5b8bd0", "#d8735f", "#9b7fd1"];
     box.className = "confetti"; box.setAttribute("aria-hidden", "true");

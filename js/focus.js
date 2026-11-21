@@ -145,27 +145,24 @@
   var buddy = null;
   var BUDDY_LINES = ["I'm here studying too. One small step at a time.", "Still with you. Keep going.", "Drifted? That's normal — just come back to the next line.", "You're doing the work. That's what counts.", "Halfway through something is still progress."];
   function noise(kind) {
-    if (buddy.audio) { try { buddy.audio.close(); } catch (e) {} buddy.audio = null; }
+    if (buddy.audio) { buddy.audio.stop(); buddy.audio = null; }
     if (!kind) return;
-    try {
-      var a = new (window.AudioContext || window.webkitAudioContext)(), len = a.sampleRate * 2, buf = a.createBuffer(1, len, a.sampleRate), d = buf.getChannelData(0), last = 0;
-      for (var k = 0; k < len; k++) { var w = Math.random() * 2 - 1; last = (last + 0.02 * w) / 1.02; d[k] = kind === "brown" ? last * 3.5 : w * 0.25; }
-      var src = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
-      src.buffer = buf; src.loop = true; f.type = "lowpass"; f.frequency.value = kind === "brown" ? 500 : 1200; g.gain.value = 0.12;
-      src.connect(f); f.connect(g); g.connect(a.destination); src.start(); buddy.audio = a;
-    } catch (e) { FN.toast("Background sound isn't available in this browser."); }
+    buddy.audio = FN.sound.noise(kind, buddy.vol);
+    if (!buddy.audio) FN.toast("Background sound isn't available in this browser.");
   }
   function studyWithMe() {
     if (buddy) return stopBuddy();
-    buddy = { start: Date.now(), line: 0, audio: null, el: document.createElement("div") };
+    buddy = { start: Date.now(), line: 0, audio: null, vol: 0.15, el: document.createElement("div") };
     var el = buddy.el; el.className = "buddy"; el.setAttribute("role", "status");
     el.innerHTML = '<div class="buddy-head"><span class="buddy-avatar" aria-hidden="true"></span><div><strong>Studying with you</strong><small class="buddy-time">0 min together</small></div>' +
       '<button class="icon-btn" data-bd="close" aria-label="Stop study with me">' + FN.icon("x") + "</button></div>" +
       '<p class="buddy-line">' + BUDDY_LINES[0] + "</p>" +
-      '<label class="small">Background sound <select data-bd="sound"><option value="">Off</option><option value="brown">Soft brown noise</option><option value="rain">Gentle rain-like noise</option></select></label>';
+      '<label class="small">Background sound <select data-bd="sound"><option value="">Off</option><option value="brown">Soft brown noise</option><option value="rain">Gentle rain</option></select></label>' +
+      '<label class="small">Volume <input type="range" min="0.02" max="0.4" step="0.01" value="0.15" data-bd="vol"></label>';
     document.body.appendChild(el); FN.icons();
     el.onclick = function (e) { if (e.target.closest('[data-bd="close"]')) stopBuddy(); };
     el.onchange = function (e) { if (e.target.dataset.bd === "sound") noise(e.target.value); };
+    el.oninput = function (e) { if (e.target.dataset.bd === "vol") { buddy.vol = +e.target.value; if (buddy.audio) buddy.audio.volume(buddy.vol); } };
     buddy.tick = setInterval(function () {
       var m = Math.floor((Date.now() - buddy.start) / 60e3);
       el.querySelector(".buddy-time").textContent = m + " min together";
@@ -268,9 +265,9 @@
   function finish() {
     clearInterval(T.tick); T.running = false;
     var cfg = FN.store.get().timer;
-    try { var a = new (window.AudioContext || window.webkitAudioContext)(), o = a.createOscillator(), g = a.createGain(); o.frequency.value = 660; g.gain.value = 0.05; o.connect(g); g.connect(a.destination); o.start(); o.stop(a.currentTime + 0.35); } catch (e) {}
+    FN.sound.chime("timer");   // calm bells (works even if the tab was idle, see FN.sound in ui.js)
     if (T.phase === "focus") {
-      FN.store.logStudy(T.mins || cfg.focus); FN.store.addXP(FN.store.XP.focus, "focus session"); FN.store.award("focus-finisher"); FN.celebrate(null, true);
+      FN.store.logStudy(T.mins || cfg.focus); FN.store.addXP(FN.store.XP.focus, "focus session"); FN.store.award("focus-finisher"); FN.celebrate(null, true, true);
       T.phase = "idle"; renderTimerChip();
       brainBreak(true);
     } else { T.phase = "idle"; renderTimerChip(); FN.toast("Break over — ready when you are."); }
