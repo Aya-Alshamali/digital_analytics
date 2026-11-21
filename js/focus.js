@@ -141,7 +141,7 @@
 
   /* ================= STUDY WITH ME (body doubling) ================= */
   // A calm companion card: "studying with you", elapsed time, gentle messages and an
-  // optional soft background noise made in the browser (no audio files, nothing sent).
+  // optional real nature recording (rain, ocean, forest, river — see FN.sound in ui.js).
   var buddy = null;
   var BUDDY_LINES = ["I'm here studying too. One small step at a time.", "Still with you. Keep going.", "Drifted? That's normal — just come back to the next line.", "You're doing the work. That's what counts.", "Halfway through something is still progress."];
   function noise(kind) {
@@ -152,13 +152,13 @@
   }
   function studyWithMe() {
     if (buddy) return stopBuddy();
-    buddy = { start: Date.now(), line: 0, audio: null, vol: 0.2, el: document.createElement("div") };
+    buddy = { start: Date.now(), line: 0, audio: null, vol: 0.5, el: document.createElement("div") };
     var el = buddy.el; el.className = "buddy"; el.setAttribute("role", "status");
     el.innerHTML = '<div class="buddy-head"><span class="buddy-avatar" aria-hidden="true"></span><div><strong>Studying with you</strong><small class="buddy-time">0 min together</small></div>' +
       '<button class="icon-btn" data-bd="close" aria-label="Stop study with me">' + FN.icon("x") + "</button></div>" +
       '<p class="buddy-line">' + BUDDY_LINES[0] + "</p>" +
-      '<label class="small">Background sound <select data-bd="sound"><option value="">Off</option><option value="rain">Gentle rain</option><option value="ocean">Ocean waves</option><option value="brown">Soft brown noise (deep, steady)</option></select></label>' +
-      '<label class="small">Volume <input type="range" min="0.02" max="0.6" step="0.01" value="0.2" data-bd="vol"></label>';
+      '<label class="small">Background sound <select data-bd="sound"><option value="">Off</option>' + Object.keys(FN.sound.SOUNDS).map(function (k) { return '<option value="' + k + '">' + FN.sound.SOUNDS[k] + '</option>'; }).join("") + '</select></label>' +
+      '<label class="small">Volume <input type="range" min="0.05" max="1" step="0.01" value="0.5" data-bd="vol"></label>';
     document.body.appendChild(el); FN.icons();
     el.onclick = function (e) { if (e.target.closest('[data-bd="close"]')) stopBuddy(); };
     el.onchange = function (e) { if (e.target.dataset.bd === "sound") noise(e.target.value); };

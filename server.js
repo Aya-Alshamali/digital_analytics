@@ -11,7 +11,7 @@
 const http = require("http"), fs = require("fs"), path = require("path");
 
 const PORT = process.env.PORT || 8080, ROOT = __dirname;
-const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css", ".json": "application/json", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".svg": "image/svg+xml", ".md": "text/plain; charset=utf-8" };
+const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css", ".json": "application/json", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".svg": "image/svg+xml", ".m4a": "audio/mp4", ".md": "text/plain; charset=utf-8" };
 
 // The two "cross-origin isolation" headers let the browser use several CPU cores for the
 // natural voice (js/kokoro-worker.js), which makes it speak several times faster.

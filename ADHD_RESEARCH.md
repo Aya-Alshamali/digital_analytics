@@ -20,7 +20,7 @@ Evidence key: **S** = peer-reviewed study · **G** = expert or organisation guid
 | **Time guess vs real time** in focus mode, with your pattern on Progress | Underestimating time | G: [Understood: time blindness](https://www.understood.org/en/articles/adhd-time-blindness) |
 | **Pick an easy win**: the shortest blocks, or a surprise pick | Getting started; interest-based motivation | G: [CHADD: college students](https://chadd.org/attention-article/how-to-help-college-and-grad-students-stay-on-top-of-their-game/) |
 | **Celebrations**: a confetti burst and soft chime after blocks, quizzes, cards and sessions; respects Reduce motion and can be turned off | Need for immediate, frequent rewards | Theory: [delay aversion / reward](https://pmc.ncbi.nlm.nih.gov/articles/PMC3688618) |
-| **Study with me**: a calm companion card with gentle messages and optional brown noise | Accountability (body doubling) | G: [CHADD: body doubling](https://chadd.org/adhd-weekly/could-a-body-double-help-you-increase-your-productivity/). Evidence is mixed ([one study found no effect](https://arxiv.org/html/2509.12153v1)). This is a solo version with no other real person. |
+| **Study with me**: a calm companion card with gentle messages and optional real nature recordings (rain, ocean, forest, river; Gravity Sound, CC BY 4.0) | Accountability (body doubling) | G: [CHADD: body doubling](https://chadd.org/adhd-weekly/could-a-body-double-help-you-increase-your-productivity/). Evidence is mixed ([one study found no effect](https://arxiv.org/html/2509.12153v1)). This is a solo version with no other real person. |
 
 ## Already in FocusNest (backed by the same sources)
 

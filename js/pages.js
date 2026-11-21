@@ -446,7 +446,10 @@
        ["Transformers.js — Hugging Face", "https://huggingface.co/docs/transformers.js"],
        ["Running Kokoro-82M in the browser — DEV Community", "https://dev.to/emojiiii/running-kokoro-82m-onnx-tts-model-in-the-browser-eeh"],
        ["StreamingKokoroJS — privacy-first in-browser speech", "https://www.scriptbyai.com/privacy-first-tts-streaming-kokoro"],
-       ["HeadTTS — Kokoro in the browser with WebGPU", "https://github.com/met4citizen/HeadTTS"]]
+       ["HeadTTS — Kokoro in the browser with WebGPU", "https://github.com/met4citizen/HeadTTS"],
+       // Study with me background sounds (CC BY 4.0 requires this credit; files were shortened and compressed).
+       ["Study with me sounds: \u201cRain on leaves\u201d, \u201cWave\u201d, \u201cForest ambience\u201d, \u201cRiver flowing\u201d \u2014 Gravity Sound, CC BY 4.0 (compressed for the web)", "https://commons.wikimedia.org/wiki/File:Rain_on_leaves_(Gravity_Sound).wav"],
+       ["Creative Commons Attribution 4.0 license", "https://creativecommons.org/licenses/by/4.0/"]]
         .map(function (c) { return '<li><a href="' + c[1] + '" target="_blank" rel="noopener noreferrer">' + esc(c[0]) + "</a></li>"; }).join("") +
       "</ul><p class=\"muted small\">Also used: Lucide icons, JSZip, PDF.js, and the Inter and Fraunces fonts.</p></section>";
     V().oninput = function (e) {
