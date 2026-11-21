@@ -498,3 +498,14 @@ body.in-focus .app { visibility: hidden; }
 .typing svg { animation: spin 1.2s linear infinite; }
 #chatKeyForm input { flex: 1; min-width: 160px; font-family: ui-monospace, monospace; }
 .signoff { margin: 8px 0 0; padding-top: 6px; border-top: 1px dashed var(--line); font-weight: 600; text-align: right; }
+/* ADHD research features (js/focus.js, ADHD_RESEARCH.md) */
+.time-ring { --p: 1; width: 190px; aspect-ratio: 1; margin: 14px auto 6px; border-radius: 50%; display: grid; place-items: center;
+  background: conic-gradient(var(--accent) calc(var(--p) * 360deg), var(--line) 0); position: relative; }
+.time-ring.break { background: conic-gradient(var(--amber) calc(var(--p) * 360deg), var(--line) 0); }
+.time-ring::before { content: ""; position: absolute; inset: 14px; border-radius: 50%; background: var(--surface); }
+.time-ring .big-time { position: relative; margin: 0; font-size: 2.6rem; }
+.mini-ring { --p: 1; width: 14px; height: 14px; border-radius: 50%; background: conic-gradient(currentColor calc(var(--p) * 360deg), transparent 0); border: 1.5px solid currentColor; }
+.ifthen { display: grid; gap: 4px; margin: 12px 0 8px; font-weight: 600; } .ifthen select { font-weight: 400; }
+.checkin { position: fixed; right: 18px; bottom: 18px; z-index: 60; max-width: 330px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; box-shadow: 0 12px 34px rgba(0,0,0,.16); }
+.checkin p { margin: 6px 0 10px; }
+.welcome-back { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; background: var(--sage-50); margin-bottom: 16px; } .welcome-back > div { flex: 1; min-width: 200px; } .welcome-back p { margin: 2px 0 0; }

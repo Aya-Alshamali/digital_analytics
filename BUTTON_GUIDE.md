@@ -86,6 +86,11 @@ Every interactive control and what it does. The site records nothing about who v
 | Timer presets / custom minutes | Sets the lengths |
 | Start focus / Pause / Resume / Reset | Countdown |
 | Brain break cards | Activity + break timer |
+| Just 2 min (get started) | A 2-minute focus session to make starting easy |
+| My if-then plan (timer panel) | Saves one plan; shown again if you drift |
+| Gentle check-in halfway (timer panel) | Turns the halfway check-in on or off |
+| Check-in: Yes, on track / I drifted | Saves the answer locally; Progress shows the on-track % |
+| Dashboard: Start with 2 minutes | Shown after 3+ days away; starts a 2-minute session |
 
 ## Pages
 

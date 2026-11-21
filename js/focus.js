@@ -7,6 +7,12 @@
      2. Flexible Pomodoro timer — presets 5/2, 15/5, 25/5 or your own.
      3. Brain breaks — stretching, breathing, screen rest, movement.
      4. Distraction parking lot — jot a thought down without leaving the lesson.
+     Research-based extras (see ADHD_RESEARCH.md):
+       - Visual "draining" ring on the timer (helps with time blindness).
+       - "Just 2 minutes" starter preset (makes starting easier).
+       - If-then plan picked before a session (implementation intentions).
+       - Gentle halfway check-in "Still on track?" (self-monitoring), logged
+         locally and shown on the Progress page.
    DEPENDENCIES: js/ui.js, js/store.js.
    ===================================================================== */
 (function () {
@@ -89,7 +95,15 @@
   /* ================= 2. POMODORO TIMER ================= */
   // Timer state survives re-renders; it uses real clock time so it does not drift.
   var T = { phase: "idle", endAt: 0, left: 0, running: false, tick: null };
-  var PRESETS = [[5, 2], [15, 5], [25, 5]];
+  var PRESETS = [[2, 1], [5, 2], [15, 5], [25, 5]];
+  // If-then plans: "If [distraction], then [action]" — picked once, shown during focus.
+  var IF_THEN = [
+    "If I want to check my phone, then I'll write it in the parking lot instead.",
+    "If I get stuck, then I'll ask FocusNest or read the Simple notes.",
+    "If my mind wanders, then I'll read the key takeaway out loud.",
+    "If I feel restless, then I'll stand up and keep going for 2 more minutes.",
+    "If I want to quit early, then I'll finish just one more block first."
+  ];
 
   function fmt(ms) { var s = Math.max(0, Math.round(ms / 1000)); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); }
 
@@ -100,7 +114,8 @@
   function renderTimerChip() {
     var el = document.getElementById("timerChip"); if (!el) return;
     var cfg = FN.store.get().timer, label = T.phase === "idle" ? cfg.focus + "/" + cfg.brk : fmt(T.running ? T.endAt - Date.now() : T.left);
-    el.innerHTML = '<button class="timer-chip ' + T.phase + (T.running ? " run" : "") + '" id="timerOpen" aria-label="Focus timer ' + label + '">' + FN.icon(T.phase === "break" ? "coffee" : "timer") + "<span>" + label + "</span></button>";
+    el.innerHTML = '<button class="timer-chip ' + T.phase + (T.running ? " run" : "") + '" id="timerOpen" aria-label="Focus timer ' + label + '">' +
+      (T.phase === "idle" ? FN.icon("timer") : '<span class="mini-ring" style="--p:' + left() + '" aria-hidden="true"></span>') + "<span>" + label + "</span></button>";
     FN.icons();
   }
 
@@ -108,19 +123,53 @@
    * FUNCTION: startTimer(phase)
    * PURPOSE: starts (or resumes) a focus or break countdown.
    */
-  function startTimer(phase) {
+  function left() { return T.total ? Math.max(0, Math.min(1, (T.running ? T.endAt - Date.now() : T.left) / T.total)) : 1; }  // fraction of time remaining
+  function startTimer(phase, mins) {
     var cfg = FN.store.get().timer;
-    if (phase) { T.phase = phase; T.left = (phase === "focus" ? cfg.focus : cfg.brk) * 60e3; }
+    if (phase) { T.phase = phase; T.mins = mins || (phase === "focus" ? cfg.focus : cfg.brk); T.left = T.total = T.mins * 60e3; T.checked = false; }
     T.endAt = Date.now() + T.left; T.running = true;
     clearInterval(T.tick);
     T.tick = setInterval(function () {
       if (Date.now() >= T.endAt) return finish();
+      // Halfway through a focus session of 10+ minutes → one gentle check-in.
+      if (T.phase === "focus" && !T.checked && T.mins >= 10 && left() <= 0.5 && FN.store.get().checkinOn) { T.checked = true; checkIn(); }
       renderTimerChip(); updatePanel();
     }, 1000);
     renderTimerChip(); updatePanel();
   }
   function pauseTimer() { T.left = T.endAt - Date.now(); T.running = false; clearInterval(T.tick); renderTimerChip(); updatePanel(); }
   function resetTimer() { clearInterval(T.tick); T = { phase: "idle", endAt: 0, left: 0, running: false, tick: null }; renderTimerChip(); updatePanel(); }
+
+  /**
+   * FUNCTION: checkIn()
+   * PURPOSE: self-monitoring — a small, non-blocking card asks "Still on track?".
+   *   The answer is saved only in this browser (Progress page shows the on-track %).
+   *   "I drifted" gets a kind reply plus the student's if-then plan. No answer = nothing saved.
+   */
+  function checkIn() {
+    var old = document.getElementById("checkin"); if (old) old.remove();
+    var box = document.createElement("div");
+    box.id = "checkin"; box.className = "checkin"; box.setAttribute("role", "status");
+    box.innerHTML = "<strong>" + FN.icon("radar") + " Halfway check-in</strong><p>Were you on track for the last few minutes?</p>" +
+      '<div class="row"><button class="btn btn-primary" data-ci="1">Yes, on track</button><button class="btn btn-soft" data-ci="0">I drifted</button></div>';
+    document.body.appendChild(box); FN.icons();
+    var auto = setTimeout(function () { box.remove(); }, 45000);
+    box.onclick = function (e) {
+      var b = e.target.closest("[data-ci]"); if (!b) return;
+      clearTimeout(auto);
+      var on = b.dataset.ci === "1", plan = FN.store.get().ifThen;
+      FN.store.update(function (s) { s.checkins.push({ at: Date.now(), on: on }); });
+      if (on) { box.remove(); FN.toast("Nice focus — keep going!"); return; }
+      box.innerHTML = "<strong>" + FN.icon("heart") + " That's okay</strong><p>Noticing you drifted <em>is</em> the skill. Back to it now.</p>" +
+        (plan ? '<p class="small"><strong>Your plan:</strong> ' + esc(plan) + "</p>" : "") +
+        '<div class="row"><button class="btn btn-soft" data-park>' + FN.icon("sticky-note") + ' Park a thought</button><button class="btn btn-primary" data-ok>Back to work</button></div>';
+      FN.icons();
+      box.onclick = function (e2) {
+        if (e2.target.closest("[data-park]")) { box.remove(); openParkingLot(); }
+        if (e2.target.closest("[data-ok]")) box.remove();
+      };
+    };
+  }
 
   /**
    * FUNCTION: finish()
@@ -132,7 +181,7 @@
     var cfg = FN.store.get().timer;
     try { var a = new (window.AudioContext || window.webkitAudioContext)(), o = a.createOscillator(), g = a.createGain(); o.frequency.value = 660; g.gain.value = 0.05; o.connect(g); g.connect(a.destination); o.start(); o.stop(a.currentTime + 0.35); } catch (e) {}
     if (T.phase === "focus") {
-      FN.store.logStudy(cfg.focus); FN.store.addXP(FN.store.XP.focus, "focus session"); FN.store.award("focus-finisher");
+      FN.store.logStudy(T.mins || cfg.focus); FN.store.addXP(FN.store.XP.focus, "focus session"); FN.store.award("focus-finisher");
       T.phase = "idle"; renderTimerChip();
       brainBreak(true);
     } else { T.phase = "idle"; renderTimerChip(); FN.toast("Break over — ready when you are."); }
@@ -143,6 +192,8 @@
     p.querySelector(".big-time").textContent = T.phase === "idle" ? FN.store.get().timer.focus + ":00" : fmt(T.running ? T.endAt - Date.now() : T.left);
     p.querySelector(".phase").textContent = T.phase === "idle" ? "Ready" : T.phase === "focus" ? "Focus" : "Break";
     p.querySelector('[data-t="toggle"]').textContent = T.running ? "Pause" : T.phase === "idle" ? "Start focus" : "Resume";
+    p.querySelector(".time-ring").style.setProperty("--p", T.phase === "idle" ? 1 : left());
+    p.querySelector(".time-ring").className = "time-ring " + T.phase;
   }
 
   /**
@@ -153,9 +204,12 @@
   function openTimer() {
     var cfg = FN.store.get().timer;
     FN.modal('<div class="timer-panel"><h3>' + FN.icon("timer") + ' Focus timer</h3><p class="muted">Short sessions count. Pick what feels doable today.</p>' +
-      '<div class="presets">' + PRESETS.map(function (p) { return '<button class="chip' + (cfg.focus === p[0] && cfg.brk === p[1] ? " on" : "") + '" data-p="' + p.join(",") + '">' + p[0] + " min focus / " + p[1] + " break</button>"; }).join("") + "</div>" +
+      '<div class="presets">' + PRESETS.map(function (p) { return '<button class="chip' + (cfg.focus === p[0] && cfg.brk === p[1] ? " on" : "") + '" data-p="' + p.join(",") + '">' + (p[0] === 2 ? FN.icon("rocket") + " Just 2 min (get started)" : p[0] + " min focus / " + p[1] + " break") + "</button>"; }).join("") + "</div>" +
       '<div class="custom"><label>Focus <input type="number" min="1" max="120" data-c="focus" value="' + cfg.focus + '"> min</label><label>Break <input type="number" min="1" max="60" data-c="brk" value="' + cfg.brk + '"> min</label></div>' +
-      '<div class="big-time" aria-live="off"></div><p class="phase muted"></p>' +
+      '<div class="time-ring" aria-hidden="true"><div class="big-time" aria-live="off"></div></div><p class="phase muted"></p>' +
+      '<label class="ifthen"><span>' + FN.icon("signpost") + ' My if-then plan <small class="muted">(optional)</small></span><select data-ifthen><option value="">No plan</option>' +
+        IF_THEN.map(function (x) { return "<option" + (FN.store.get().ifThen === x ? " selected" : "") + ">" + esc(x) + "</option>"; }).join("") + "</select></label>" +
+      '<label class="chip"><input type="checkbox" data-checkin' + (FN.store.get().checkinOn ? " checked" : "") + '> Gentle check-in halfway (sessions of 10+ min)</label>' +
       '<div class="row center"><button class="btn btn-primary btn-lg" data-t="toggle"></button><button class="btn btn-ghost" data-t="reset">Reset</button><button class="btn btn-soft" data-t="break">' + FN.icon("coffee") + " Brain break</button></div></div>", function (m) {
       updatePanel();
       m.onclick = function (e) {
@@ -167,6 +221,8 @@
         if (t.dataset.t === "break") { FN.closeModal(); brainBreak(false); }
       };
       m.onchange = function (e) {
+        if (e.target.hasAttribute("data-ifthen")) { FN.store.update(function (s) { s.ifThen = e.target.value; }); return; }
+        if (e.target.hasAttribute("data-checkin")) { FN.store.update(function (s) { s.checkinOn = e.target.checked; }); return; }
         var c = e.target.dataset.c; if (!c) return;
         var v = Math.max(1, Math.min(c === "focus" ? 120 : 60, parseInt(e.target.value, 10) || 1));
         FN.store.update(function (s) { s.timer[c] = v; }); if (T.phase === "idle") updatePanel(); renderTimerChip();
@@ -223,5 +279,5 @@
     });
   }
 
-  FN.focus = { open: open, openTimer: openTimer, renderTimerChip: renderTimerChip, brainBreak: brainBreak, openParkingLot: openParkingLot, timerState: function () { return T; } };
+  FN.focus = { open: open, openTimer: openTimer, quickStart: function () { startTimer("focus", 2); FN.toast("2 minutes. Just start — you can stop after."); }, checkIn: checkIn, renderTimerChip: renderTimerChip, brainBreak: brainBreak, openParkingLot: openParkingLot, timerState: function () { return T; } };
 })();

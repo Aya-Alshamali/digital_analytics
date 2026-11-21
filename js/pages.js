@@ -142,9 +142,13 @@
     var all = FN.courses.topics(), done = all.filter(function (x) { return FN.store.topic(x.topic.id).complete; }).length;
     var next = nextLesson(ch), weak = weakTopics().slice(0, 3), due = dueCards().length;
     var res = s.resume && FN.courses.find(s.resume.topic);
+    // Welcome back (no guilt): last finished focus session was 3+ days ago.
+    var lastDay = Object.keys(s.studyLog).filter(function (k) { return s.studyLog[k] > 0; }).sort().pop();
+    var away = lastDay && (Date.now() - new Date(lastDay + "T12:00").getTime()) / 864e5 >= 3;
     var todayMin = s.studyLog[FN.store.today()] || 0, goal = s.goals.dailyMinutes, gp = Math.min(100, Math.round(todayMin / goal * 100));
     V().innerHTML = '<div class="dash">' +
       head(hello, "Studying: <strong>" + esc(ch.title) + '</strong> · <a href="#/chapters">change chapter</a>') +
+      (away ? '<section class="card welcome-back">' + FN.icon("sunrise") + '<div><strong>Welcome back! Breaks happen — nothing is lost.</strong><p class="muted small">Your progress is saved. Starting small is the easiest way back in.</p></div><button class="btn btn-primary" id="dashQuick">' + FN.icon("rocket") + " Start with 2 minutes</button></section>" : "") +
       '<div class="dash-grid">' +
       (res ? '<a class="card resume" href="' + esc(s.resume.hash) + '"><span class="eyebrow">' + FN.icon("history") + " Resume where you left off</span><strong>" + esc(res.topic.title) + "</strong><small>" + esc(res.chapter.title) + " · " + esc(s.resume.hash.split("/")[3] || "overview") + "</small><span class=\"btn btn-primary\">Continue " + FN.icon("arrow-right") + "</span></a>"
         : next ? '<a class="card resume" href="#/learn/' + esc(next.topic.id) + '/overview"><span class="eyebrow">' + FN.icon("rocket") + " Start here</span><strong>" + esc(next.topic.title) + "</strong><small>" + esc(next.chapter.title) + '</small><span class="btn btn-primary">Begin ' + FN.icon("arrow-right") + "</span></a>" : "") +
@@ -161,6 +165,7 @@
       '<a href="#/progress" class="link">Open progress tracker →</a></section></div>' +
       '<section class="card upload-cta"><div>' + FN.icon("file-up") + "<div><strong>Got the next chapter's slides?</strong><p class=\"muted small\">Add them as a new chapter of " + esc(c.title) + " — notes, flashcards and quizzes are built from their text.</p></div></div><a class=\"btn btn-primary\" href=\"#/chapters\">Add a chapter</a></section></div>";
     $("#dashTimer").onclick = FN.focus.openTimer;
+    if ($("#dashQuick")) $("#dashQuick").onclick = FN.focus.quickStart;
     FN.icons();
   }
 
@@ -369,12 +374,14 @@
     var days = []; for (var i = 27; i >= 0; i--) { var d = FN.store.today(new Date(Date.now() - i * 864e5)); days.push({ d: d, m: s.studyLog[d] || 0 }); }
     var activeDays = days.slice(-7).filter(function (x) { return x.m > 0; }).length;
     var weak = weakTopics(c), due = dueCards(c).length;
+    var wk = s.checkins.filter(function (x) { return x.at > Date.now() - 7 * 864e5; }), onPct = wk.length ? Math.round(wk.filter(function (x) { return x.on; }).length / wk.length * 100) : null;
     V().innerHTML = head("Progress Tracker", "Progress here is based on what you can recall (quizzes, checks, cards) — not on time spent on a page.", "chart-no-axes-column") +
       '<div class="dash-grid">' +
       '<div class="card stat"><span class="eyebrow">Lessons completed</span><strong class="big">' + done.length + "/" + all.length + '</strong><small class="muted">quiz ≥ 60%</small></div>' +
       '<div class="card stat"><span class="eyebrow">Quiz accuracy</span><strong class="big">' + (hist.length ? avg + "%" : "—") + '</strong><small class="muted">' + hist.length + " quizzes</small></div>" +
       '<div class="card stat"><span class="eyebrow">Cards due</span><strong class="big">' + due + '</strong><a class="link small" href="#/flashcards">Review</a></div>' +
-      '<div class="card stat"><span class="eyebrow">Consistency</span><strong class="big">' + activeDays + '/7</strong><small class="muted">days with a finished focus session</small></div></div>' +
+      '<div class="card stat"><span class="eyebrow">Consistency</span><strong class="big">' + activeDays + '/7</strong><small class="muted">days with a finished focus session</small></div>' +
+      '<div class="card stat"><span class="eyebrow">On track (check-ins)</span><strong class="big">' + (onPct === null ? "—" : onPct + "%") + '</strong><small class="muted">' + (wk.length ? wk.length + " check-ins this week. Noticing drift is progress too." : "Answer the halfway check-in during focus sessions.") + "</small></div></div>" +
       '<div class="grid-2"><section class="card"><h3>Quiz performance by topic</h3><div class="hbars">' + all.map(function (x) { var b = FN.store.topic(x.topic.id).quizBest || 0; return '<a class="hbar" href="#/learn/' + esc(x.topic.id) + '/quiz"><span class="lab">' + esc(x.topic.title) + '</span><span class="track"><span style="width:' + b + '%" class="' + (b >= 80 ? "good" : b >= 60 ? "ok" : b ? "low" : "") + '"></span></span><span class="val">' + (b ? b + "%" : "—") + "</span></a>"; }).join("") + "</div></section>" +
       '<section class="card"><h3>Learning consistency (last 4 weeks)</h3><div class="heat" role="img" aria-label="Focus minutes per day for the last 28 days">' + days.map(function (x) { var l = x.m === 0 ? 0 : x.m < 10 ? 1 : x.m < 25 ? 2 : 3; return '<span class="l' + l + '" title="' + x.d + ": " + x.m + ' min"></span>'; }).join("") + '</div><p class="muted small">Gaps are normal. ' + (s.streakEnabled ? "Streak tracking is on (Settings)." : "Streaks are off — turn them on in Settings if they motivate you.") + "</p>" +
       "<h3>Topics needing review</h3>" + (weak.length ? "<ul>" + weak.map(function (w) { return '<li><a href="#/learn/' + esc(w.topic.id) + '/notes">' + esc(w.topic.title) + "</a></li>"; }).join("") + "</ul>" : '<p class="muted">None right now.</p>') +
