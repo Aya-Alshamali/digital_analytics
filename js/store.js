@@ -26,6 +26,8 @@
     cards: {},                   // cardId  → { interval, due, reps, lapses, last, saved }
     quizHistory: [],             // [{ scope, mode, level, correct, total, at, missed:[sectionIds] }]
     xp: 0, badges: [],
+    regexSolved: {},             // Regex Lab: exerciseId → time solved
+    regexDrafts: {},             // Regex Lab: exerciseId → what you last typed
     streakEnabled: false,        // optional, OFF by default (no guilt mechanics)
     studyLog: {},                // "2026-11-07" → minutes of finished focus sessions
     goals: { dailyMinutes: 20 },

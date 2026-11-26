@@ -107,6 +107,8 @@ Every interactive control and what it does. The site records nothing about who v
 | Chapters | Remove → confirm (added chapters only) | Deletes that chapter and its slides from this device |
 | Lecture Slides | Deck tabs, search | Filters the slide cards |
 | Practice | Start | Topic or final quiz |
+| Regex Lab | Tool, Load an example, symbol chips, Pattern, Test values | Re-tests every value as you type; highlights the matched part and shows $1, $2… |
+| Regex Lab | Exercise dots 1–8, Check (or Enter), Hint, Show the slide answer, Open in playground, Previous/Next | Grades your pattern against must-match / must-not-match values; solving one gives +10 XP once |
 | Planner | Create plan, Open timer, Take a break | Plan list / dialogs |
 | Settings | Sliders, selects, switches (incl. Panels: collapse sidebar / hide chapters) | Applies instantly |
 | Settings | Export progress / Reset progress → confirm | Downloads .json / wipes progress |

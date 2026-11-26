@@ -25,6 +25,7 @@
 | Resume | Opening the app returns to the exact topic, tab and note section | `js/app.js`, `lesson.js` scroll tracking | |
 | Tutor | Ask FocusNest chat: 7 quick actions + free questions answered with matching slide excerpts (current chapter first) and slide numbers; refuses to guess | `js/tutor.js` | Works offline; nothing is sent anywhere |
 | Revision | Dashboard recommendations, "needs review" from quiz misses, cards due, 28-day consistency, quiz performance by topic | `js/pages.js` `dashboard()`, `progress()` | Completion = quiz ≥ 60%, not time on page |
+| Regex Lab | Playground that matches like GA4 (full), GTM (partial / ignore case), RegEx Table or BigQuery; the 8 Chapter 3 exercises (slides 74–76) graded against test values; warns about RE2-unsupported syntax | `js/regex-lab.js` | Runs in the browser; solved exercises + drafts saved in `regexSolved` / `regexDrafts` |
 | Planner | Spreads unfinished topics over chosen study days until a date | `pages.js` `planner()` | |
 | Privacy | No visitor tracking at all; progress stays in the browser; export/reset data | Settings | |
 | Panels | Collapse the left sidebar to icons, hide the chapters column, close the tutor and slide panels | `js/app.js` `togglePanel()`, Settings → Panels | Remembered on this device |
