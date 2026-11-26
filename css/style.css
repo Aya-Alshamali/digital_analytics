@@ -499,7 +499,6 @@ body.in-focus .app { visibility: hidden; }
 .followups { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); } .followups .chip { text-align: left; }
 .typing svg { animation: spin 1.2s linear infinite; }
 #chatKeyForm input { flex: 1; min-width: 160px; font-family: ui-monospace, monospace; }
-.signoff { margin: 8px 0 0; padding-top: 6px; border-top: 1px dashed var(--line); font-weight: 600; text-align: right; }
 /* ADHD research features (js/focus.js, ADHD_RESEARCH.md) */
 .time-ring { --p: 1; width: 190px; aspect-ratio: 1; margin: 14px auto 6px; border-radius: 50%; display: grid; place-items: center;
   background: conic-gradient(var(--accent) calc(var(--p) * 360deg), var(--line) 0); position: relative; }
